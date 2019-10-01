@@ -21,19 +21,17 @@ mirror = sh.git.clone.bake('--mirror')
 tar = sh.tar.bake('-cf')
 
 workdir = 'workdir'
+RECIPIENTS = ['skryzhni@redhat.com', 'jmelis@redhat.com']
+GIT_KEEPER_BUCKET = os.environ['GIT_KEEPER_BUCKET']
 
-def upload2s3(repo_tar, DATE, object_name):
-    s3_client = boto3.client('s3')
+def upload2s3(s3_client, repo_tar, DATE, object_name):
     try:
         response = s3_client.upload_file(repo_tar, GIT_KEEPER_BUCKET, DATE + '/' + object_name)
     except ClientError as e:
         logging.error(e)
-        return False
-    return True
 
 def cleanwrkdir(workdir):
-    os.makedirs(workdir, exist_ok=True)
-    shutil.rmtree(workdir)
+    shutil.rmtree(workdir, ignore_errors=True)
     os.makedirs(workdir, exist_ok=True)
 
 def clone_repo(repo_url, repo_dir):
@@ -55,6 +53,7 @@ def main():
     if s3.Bucket(GIT_KEEPER_BUCKET).creation_date is None:
         raise Exception('Bucket \'{}\' doesn\'t exist'.format(GIT_KEEPER_BUCKET))
     gpg = gnupg.GPG()
+    s3_client = boto3.client('s3')
 
     repolist = sys.stdin.read().splitlines()
     for repo in repolist:
@@ -67,15 +66,11 @@ def main():
         repo_gpg = repo_tar + '.gpg'
         with open(repo_tar, 'rb') as f:
             status = gpg.encrypt_file(
-                f, recipients=['skryzhni@redhat.com', 'jmelis@redhat.com'],
+                f, recipients=RECIPIENTS,
                 output=repo_gpg,
                 armor=False)
-        upload2s3(repo_gpg, DATE, os.path.basename(repo_url) + '.tar.gpg')
-#        cleanwrkdir(workdir)
+        upload2s3(s3_client, repo_gpg, DATE, os.path.basename(repo_url) + '.tar.gpg')
+        cleanwrkdir(workdir)
 
 if __name__ == '__main__':
-    try:
-        GIT_KEEPER_BUCKET = os.environ['GIT_KEEPER_BUCKET']
-    except Exception:
-        raise Exception('Invalid GIT_KEEPER_BUCKET Env.')
     main()
