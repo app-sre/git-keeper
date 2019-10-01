@@ -29,6 +29,7 @@ def upload2s3(s3_client, repo_tar, DATE, object_name):
         response = s3_client.upload_file(repo_tar, GIT_KEEPER_BUCKET, DATE + '/' + object_name)
     except ClientError as e:
         logging.error(e)
+        sys.exit(1)
 
 def cleanwrkdir(workdir):
     shutil.rmtree(workdir, ignore_errors=True)
@@ -36,7 +37,6 @@ def cleanwrkdir(workdir):
 
 def clone_repo(repo_url, repo_dir):
     REPO_URL =  'git@' + repo_url.split('/', 3)[2] + ':' + repo_url.split('/', 3)[3]
-#    print(REPO_URL)
     mirror(REPO_URL, repo_dir)
 
 
