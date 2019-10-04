@@ -15,13 +15,14 @@ import logging
 from datetime import datetime
 import sys
 import gnupg
+import json
 
 # bake some commands
 mirror = sh.git.clone.bake('--mirror')
 tar = sh.tar.bake('-cf')
 
 workdir = 'workdir'
-RECIPIENTS = ['skryzhni@redhat.com', 'jmelis@redhat.com']
+RECIPIENTS = json.loads(os.environ['GPG_RECIPIENTS'])
 GIT_KEEPER_BUCKET = os.environ['GIT_KEEPER_BUCKET']
 
 def upload2s3(s3_client, repo_tar, DATE, object_name):
