@@ -13,9 +13,21 @@ host github.com
     UserKnownHostsFile /dev/null
 EOF
 
-gpg --import /skryzhni.pub.asc
-gpg --import /jmelis.pub.asc
+for filename in /config/gpg/*; do
+  gpg --import $filename
+done
 
-for fpr in $(gpg --list-keys --with-colons  | awk -F: '/fpr:/ {print $10}' | sort -u); do  echo -e "5\ny\n" |  gpg --command-fd 0 --expert --edit-key $fpr trust; done
+RECEPIENT_LIST=$(gpg --with-colons --list-sigs | awk -F: '/^uid/{print $10}' | cut -d'<' -f2 | cut -d'>' -f1 | sort | uniq)
+
+RECIPIENTS="["
+while read -r line; do
+    RECIPIENTS="${RECIPIENTS}\"$line\", "
+done <<< "$RECEPIENT_LIST"
+
+RECIPIENTS="${RECIPIENTS::-2}]"
+
+gpg --list-keys --fingerprint --with-colons |
+  sed -E -n -e 's/^fpr:::::::::([0-9A-F]+):$/\1:6:/p' |
+  gpg --import-ownertrust
 
 ./git-keeper.py
