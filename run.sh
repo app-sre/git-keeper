@@ -21,5 +21,4 @@ cat repos.txt | docker run --rm -i \
             -v $CONFIG_DIR:/config:z \
             quay.io/app-sre/git-keeper:latest \
             --config /config/config.toml \
-            --ssh_key /config/git \
             --gpgs /config/gpg
