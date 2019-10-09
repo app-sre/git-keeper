@@ -24,9 +24,9 @@ mirror = sh.git.clone.bake('--mirror')
 tar = sh.tar.bake('-cf')
 workdir = 'workdir'
 
-def upload2s3(s3_client, repo_tar, GIT_KEEPER_BUCKET, DATE, object_name):
+def upload2s3(s3_client, repo_tar, git_keeper_bucket, date, object_name):
     try:
-        response = s3_client.upload_file(repo_tar, GIT_KEEPER_BUCKET, DATE + '/' + object_name)
+        response = s3_client.upload_file(repo_tar, git_keeper_bucket, date + '/' + object_name)
     except ClientError as e:
         logging.error(e)
         sys.exit(1)
@@ -61,10 +61,8 @@ def main():
     gpg = gnupg.GPG()
     with open(args.gpgs) as f:
         key_data = f.read()
-    import_result = gpg.import_keys(key_data)
-    for gpg_key in gpg.list_keys():
-        gpg.trust_keys(gpg_key['fingerprint'], 'TRUST_ULTIMATE')
-
+    gpg.import_keys(key_data)
+    RECIPIENTS = [k['fingerprint'] for k in gpg.list_keys()]
     s3_client = boto3.client('s3',
         aws_access_key_id = cnf["s3"]["aws_access_key_id"],
         aws_secret_access_key = cnf["s3"]["aws_secret_access_key"])
@@ -79,7 +77,7 @@ def main():
         repo_gpg = repo_tar + '.gpg'
         with open(repo_tar, 'rb') as f:
             status = gpg.encrypt_file(
-                f, recipients='1A826DCC093BFE3FDA89AA57F9E6D8B5C3E634CE',
+                f, recipients=RECIPIENTS,
                 output=repo_gpg,
                 armor=False,
                 always_trust=True)
