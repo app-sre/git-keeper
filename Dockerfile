@@ -3,4 +3,4 @@ LABEL maintainer="Serhii Kryzhnii skryzhni@redhat.com"
 COPY requirements.txt .
 RUN pip3 install --upgrade pip && pip3 install -r requirements.txt
 COPY git-keeper.py .
-ENTRYPOINT git-keeper.py
+ENTRYPOINT ./git-keeper.py
