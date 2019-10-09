@@ -16,16 +16,15 @@ from datetime import datetime
 import sys
 import gnupg
 import json
+import toml
+import argparse
 
 # bake some commands
 mirror = sh.git.clone.bake('--mirror')
 tar = sh.tar.bake('-cf')
-
 workdir = 'workdir'
-RECIPIENTS = json.loads(os.environ['GPG_RECIPIENTS'])
-GIT_KEEPER_BUCKET = os.environ['GIT_KEEPER_BUCKET']
 
-def upload2s3(s3_client, repo_tar, DATE, object_name):
+def upload2s3(s3_client, repo_tar, GIT_KEEPER_BUCKET, DATE, object_name):
     try:
         response = s3_client.upload_file(repo_tar, GIT_KEEPER_BUCKET, DATE + '/' + object_name)
     except ClientError as e:
@@ -42,20 +41,35 @@ def clone_repo(repo_url, repo_dir):
 
 
 def main():
-
+    parser = argparse.ArgumentParser(
+        description='Configuration TOML and GPG keys locations.')
+    parser.add_argument('--config', type=str,
+        help='Path of configuration TOML file')
+    parser.add_argument('--gpgs', type=str,
+        help='Path of GPG keys file')
+    args = parser.parse_args()
+    cnf = toml.load(open(args.config))
     DATE = datetime.now().strftime('%Y-%m-%d')
     try:
-        s3_client = boto3.client('s3')
+        s3_client = boto3.client('s3',
+            aws_access_key_id = cnf["s3"]["aws_access_key_id"],
+            aws_secret_access_key = cnf["s3"]["aws_secret_access_key"])
     except botocore.exceptions.NoCredentialsError:
         raise Exception('No AWS credentials found.')
     except botocore.exceptions.ClientError:
         raise Exception('Invalid AWS credentials.')
+    s3_client.list_buckets()
     s3 = boto3.resource('s3')
-    if s3.Bucket(GIT_KEEPER_BUCKET).creation_date is None:
-        raise Exception('Bucket \'{}\' doesn\'t exist'.format(GIT_KEEPER_BUCKET))
-    gpg = gnupg.GPG()
-    s3_client = boto3.client('s3')
+    if s3.Bucket(cnf["s3"]["bucket"]).creation_date is None:
+        raise Exception('Bucket \'{}\' doesn\'t exist'.format(cnf["s3"]["bucket"]))
+    gpg = gnupg.GPG(gnupghome='/home/skryzhni/test/')
+    with open(args.gpgs) as f:
+        key_data = f.read()
+    import_result = gpg.import_keys(key_data)
+    for gpg_key in gpg.list_keys():
+        gpg.trust_keys(gpg_key['fingerprint'], 'TRUST_ULTIMATE')
 
+    s3_client = boto3.client('s3')
     repolist = sys.stdin.read().splitlines()
     for repo in repolist:
         repo_url = repo + '.git'
@@ -67,10 +81,11 @@ def main():
         repo_gpg = repo_tar + '.gpg'
         with open(repo_tar, 'rb') as f:
             status = gpg.encrypt_file(
-                f, recipients=RECIPIENTS,
+                f, recipients='1A826DCC093BFE3FDA89AA57F9E6D8B5C3E634CE',
                 output=repo_gpg,
-                armor=False)
-        upload2s3(s3_client, repo_gpg, DATE, os.path.basename(repo_url) + '.tar.gpg')
+                armor=False,
+                always_trust=True)
+        upload2s3(s3_client, repo_gpg, cnf["s3"]["bucket"], DATE, os.path.basename(repo_url) + '.tar.gpg')
         cleanwrkdir(workdir)
 
 if __name__ == '__main__':
