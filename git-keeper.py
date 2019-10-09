@@ -36,9 +36,7 @@ def cleanwrkdir(workdir):
     os.makedirs(workdir, exist_ok=True)
 
 def clone_repo(repo_url, repo_dir):
-    REPO_URL =  'git@' + repo_url.split('/', 3)[2] + ':' + repo_url.split('/', 3)[3]
-    mirror(REPO_URL, repo_dir)
-
+    mirror(repo_url, repo_dir)
 
 def main():
     parser = argparse.ArgumentParser(
