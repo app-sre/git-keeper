@@ -58,18 +58,16 @@ def main():
         raise Exception('No AWS credentials found.')
     except botocore.exceptions.ClientError:
         raise Exception('Invalid AWS credentials.')
-    s3_client.list_buckets()
-    s3 = boto3.resource('s3')
-    if s3.Bucket(cnf["s3"]["bucket"]).creation_date is None:
-        raise Exception('Bucket \'{}\' doesn\'t exist'.format(cnf["s3"]["bucket"]))
-    gpg = gnupg.GPG(gnupghome='/home/skryzhni/test/')
+    gpg = gnupg.GPG()
     with open(args.gpgs) as f:
         key_data = f.read()
     import_result = gpg.import_keys(key_data)
     for gpg_key in gpg.list_keys():
         gpg.trust_keys(gpg_key['fingerprint'], 'TRUST_ULTIMATE')
 
-    s3_client = boto3.client('s3')
+    s3_client = boto3.client('s3',
+        aws_access_key_id = cnf["s3"]["aws_access_key_id"],
+        aws_secret_access_key = cnf["s3"]["aws_secret_access_key"])
     repolist = sys.stdin.read().splitlines()
     for repo in repolist:
         repo_url = repo + '.git'
