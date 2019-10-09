@@ -62,7 +62,7 @@ def main():
     with open(args.gpgs) as f:
         key_data = f.read()
     gpg.import_keys(key_data)
-    RECIPIENTS = [k['fingerprint'] for k in gpg.list_keys()]
+    recipients = [k['fingerprint'] for k in gpg.list_keys()]
     s3_client = boto3.client('s3',
         aws_access_key_id = cnf["s3"]["aws_access_key_id"],
         aws_secret_access_key = cnf["s3"]["aws_secret_access_key"])
@@ -77,7 +77,7 @@ def main():
         repo_gpg = repo_tar + '.gpg'
         with open(repo_tar, 'rb') as f:
             status = gpg.encrypt_file(
-                f, recipients=RECIPIENTS,
+                f, recipients=recipients,
                 output=repo_gpg,
                 armor=False,
                 always_trust=True)
