@@ -21,7 +21,7 @@ echo "CONFIG_NETRC" | base64 -d >$CONFIG_DIR/.netrc
 chmod 0666 $CONFIG_DIR/.netrc
 
 cat repos.txt | docker run --rm -i \
-            -e GIT_SSL_NO_VERIFY=true
+            -e GIT_SSL_NO_VERIFY=true \
             -v $CONFIG_DIR:/config:z \
             quay.io/app-sre/git-keeper:latest \
             --config /config/config.toml \
