@@ -65,12 +65,9 @@ def git_clone_upload(s3_client, gpg, recipients, repo, s3_bucket, date):
             output=repo_gpg,
             armor=False,
             always_trust=True)
-    try:
-        upload2s3(s3_client, repo_gpg, s3_bucket,
-                  date, os.path.basename(
-                      repo_url) + '.tar.gpg')
-    except Exception as e:
-        logging.error(e)
+    upload2s3(s3_client, repo_gpg, s3_bucket,
+              date, os.path.basename(
+                  repo_url) + '.tar.gpg')
     cleanwrkdir(workdir)
 
 
@@ -99,7 +96,10 @@ def main():
 
     repolist = sys.stdin.read().splitlines()
     for repo in repolist:
-        git_clone_upload(s3_client, gpg, recipients, repo, s3_bucket, date)
+        try:
+            git_clone_upload(s3_client, gpg, recipients, repo, s3_bucket, date)
+        except Exception as e:
+            logging.error(e)
 
 
 if __name__ == '__main__':
