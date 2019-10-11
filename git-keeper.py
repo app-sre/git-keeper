@@ -10,7 +10,6 @@ import os
 import sh
 import boto3
 import botocore
-from botocore.exceptions import ClientError
 import shutil
 import logging
 from datetime import datetime
@@ -26,11 +25,8 @@ workdir = 'workdir'
 
 
 def upload2s3(s3_client, repo_tar, git_keeper_bucket, date, object_name):
-    try:
-        s3_client.upload_file(
-            repo_tar, git_keeper_bucket, os.path.join(date, object_name))
-    except ClientError as e:
-        logging.error(e)
+    s3_client.upload_file(
+        repo_tar, git_keeper_bucket, os.path.join(date, object_name))
 
 
 def cleanwrkdir(workdir):
@@ -69,9 +65,12 @@ def git_clone_upload(s3_client, gpg, recipients, repo, s3_bucket, date):
             output=repo_gpg,
             armor=False,
             always_trust=True)
-    upload2s3(s3_client, repo_gpg, s3_bucket,
-              date, os.path.basename(
-                  repo_url) + '.tar.gpg')
+    try:
+        upload2s3(s3_client, repo_gpg, s3_bucket,
+                  date, os.path.basename(
+                      repo_url) + '.tar.gpg')
+    except Exception as e:
+        logging.error(e)
     cleanwrkdir(workdir)
 
 
