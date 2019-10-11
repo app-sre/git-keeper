@@ -28,10 +28,9 @@ workdir = 'workdir'
 def upload2s3(s3_client, repo_tar, git_keeper_bucket, date, object_name):
     try:
         s3_client.upload_file(
-            repo_tar, git_keeper_bucket, date + '/' + object_name)
+            repo_tar, git_keeper_bucket, os.path.join(date, object_name))
     except ClientError as e:
         logging.error(e)
-        sys.exit(1)
 
 
 def cleanwrkdir(workdir):
@@ -43,20 +42,22 @@ def clone_repo(repo_url, repo_dir):
     mirror(repo_url, repo_dir)
 
 
-def check_aws_creds(aws_access_key_id, aws_secret_access_key):
+def get_s3_client(aws_access_key_id, aws_secret_access_key):
     try:
-        boto3.client('s3',
-                     aws_access_key_id=aws_access_key_id,
-                     aws_secret_access_key=aws_secret_access_key)
+        s3_client = boto3.client('s3',
+                                 aws_access_key_id=aws_access_key_id,
+                                 aws_secret_access_key=aws_secret_access_key)
     except botocore.exceptions.NoCredentialsError:
         raise Exception('No AWS credentials found.')
     except botocore.exceptions.ClientError:
         raise Exception('Invalid AWS credentials.')
+    return s3_client
 
 
 def git_clone_upload(s3_client, gpg, recipients, repo, s3_bucket, date):
-    repo_url = repo + '.git'
-    repo_dir = workdir + '/' + os.path.basename(repo_url)
+    if not repo.endswith('.git'):
+        repo_url = repo + '.git'
+    repo_dir = os.path.join(workdir, os.path.basename(repo_url))
     repo_tar = repo_dir + '.tar'
     cleanwrkdir(workdir)
     clone_repo(repo_url, repo_dir)
@@ -82,20 +83,21 @@ def main():
     parser.add_argument('--gpgs', type=str,
                         help='Path of GPG keys file')
     args = parser.parse_args()
+
     cnf = toml.load(open(args.config))
     aws_access_key_id = cnf["s3"]["aws_access_key_id"]
     aws_secret_access_key = cnf["s3"]["aws_secret_access_key"]
     s3_bucket = cnf["s3"]["bucket"]
+    s3_client = get_s3_client(aws_access_key_id, aws_secret_access_key)
+
     date = datetime.now().strftime('%Y-%m-%d')
-    check_aws_creds(aws_access_key_id, aws_secret_access_key)
-    s3_client = boto3.client('s3',
-                             aws_access_key_id=aws_access_key_id,
-                             aws_secret_access_key=aws_secret_access_key)
+
     gpg = gnupg.GPG()
     with open(args.gpgs) as f:
         key_data = f.read()
     gpg.import_keys(key_data)
     recipients = [k['fingerprint'] for k in gpg.list_keys()]
+
     repolist = sys.stdin.read().splitlines()
     for repo in repolist:
         git_clone_upload(s3_client, gpg, recipients, repo, s3_bucket, date)
