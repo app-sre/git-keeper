@@ -4,7 +4,7 @@
 [ -z "$GRAPHQL_PASSWORD" ] && echo "Please define GRAPHQL_PASSWORD env var" && exit 1
 [ -z "$GRAPHQL_SERVER_BASE_URL" ] && echo "Please define GRAPHQL_SERVER_BASE_URL env var" && exit 1
 
-GRAPHQL_SERVER=$GRAPHQL_SERVER_BASE_URL/graphql
+GRAPHQL_SERVER=https://$GRAPHQL_SERVER_BASE_URL/graphql
 QUERY='{"query":"{ apps_v1 { codeComponents { url, resource }}}"}'
 
 curl -s -H 'Content-Type: application/json' --user "${GRAPHQL_USERNAME}:${GRAPHQL_PASSWORD}" --data-binary "$QUERY" "${GRAPHQL_SERVER}" | \
