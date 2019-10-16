@@ -4,16 +4,15 @@
 # - $CONFIG_TOML
 # - $GPG_KEYS
 # - $CONFIG_NETRC
-# - $USERNAME_PRODUCTION
-# - $PASSWORD_PRODUCTION
+# - $GRAPHQL_SERVER_BASE_URL
+# - $GRAPHQL_USERNAME
+# - $GRAPHQL_PASSWORD
 
 CONFIG_DIR="$PWD/config"
 mkdir -p $CONFIG_DIR/
 
 # get repos
-export APP_INTERFACE_USER="${USERNAME_PRODUCTION}"
-export APP_INTERFACE_PASSWORD="${PASSWORD_PRODUCTION}"
-bash repos.sh > repos.txt
+./repos.sh > repos.txt
 
 # dump gpg keys to file
 echo "$GPG_KEYS" | base64 -d > $CONFIG_DIR/gpg_keys
