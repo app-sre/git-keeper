@@ -60,7 +60,7 @@ def get_gitlab_backup_orgs():
 
 
 def get_gitlab_org_repos(org):
-    headers = {'Authorization': 'Bearer {}'.format(GITLAB_TOKEN)}
+    headers = {'Private-Token': GITLAB_TOKEN}
     base_url = os.path.join(GITLAB_SERVER, 'api/v4')
 
     url = os.path.join(base_url, 'groups', org, 'projects')
