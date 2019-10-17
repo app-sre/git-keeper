@@ -7,12 +7,14 @@
 # - $GRAPHQL_SERVER_BASE_URL
 # - $GRAPHQL_USERNAME
 # - $GRAPHQL_PASSWORD
+# - $GITLAB_SERVER
+# - $GITLAB_TOKEN
 
 CONFIG_DIR="$PWD/config"
 mkdir -p $CONFIG_DIR/
 
 # get repos
-./repos.sh > repos.txt
+./repos.py > repos.txt
 
 # dump gpg keys to file
 echo "$GPG_KEYS" | base64 -d > $CONFIG_DIR/gpg_keys
