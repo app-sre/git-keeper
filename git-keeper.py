@@ -3,7 +3,8 @@
 # git-keeper utility, used for backing up git repos to AWS S3
 # supported git providers github and gitlab
 #
-# expecting ssh key for private repos and AWS S3 credentials configured
+# expecting correct .netrc in mounted /config/.netrc for private repos
+# and AWS S3 credentials in TOML
 # tested only on linux OS
 
 import os
@@ -17,17 +18,12 @@ import sys
 import gnupg
 import toml
 import argparse
+from urllib.parse import urlparse
 
 # bake some commands
 mirror = sh.git.clone.bake('--mirror')
 tar = sh.tar.bake('-cf')
 workdir = 'workdir'
-
-
-def upload2s3(s3_client, repo_tar, git_keeper_bucket, subfolder,
-              date, object_name):
-    s3_client.upload_file(repo_tar, git_keeper_bucket,
-                          os.path.join(subfolder, date, object_name))
 
 
 def cleanwrkdir(workdir):
@@ -52,9 +48,9 @@ def get_s3_client(aws_access_key_id, aws_secret_access_key):
 
 
 def git_clone_upload(s3_client, gpg, recipients,
-                     repo, s3_bucket, subfolder, date):
-    if not repo.endswith('.git'):
-        repo_url = repo + '.git'
+                     repo_url, s3_bucket, subfolder, date):
+    if not repo_url.endswith('.git'):
+        repo_url = repo_url + '.git'
     repo_dir = os.path.join(workdir, os.path.basename(repo_url))
     repo_tar = repo_dir + '.tar'
     cleanwrkdir(workdir)
@@ -67,9 +63,10 @@ def git_clone_upload(s3_client, gpg, recipients,
             output=repo_gpg,
             armor=False,
             always_trust=True)
-    upload2s3(s3_client, repo_gpg, s3_bucket, subfolder,
-              date, os.path.basename(
-                  repo_url) + '.tar.gpg')
+    object_name = urlparse(repo_url).netloc + \
+        urlparse(repo_url).path + '.tar.gpg'
+    s3_client.upload_file(repo_gpg, s3_bucket, os.path.join(
+        subfolder, date, object_name))
     cleanwrkdir(workdir)
 
 
@@ -83,7 +80,6 @@ def main():
     parser.add_argument('--subfolder', type=str, default='',
                         help='Path of subfolder in bucket to store backups')
     args = parser.parse_args()
-    print(args.subfolder)
 
     cnf = toml.load(open(args.config))
     aws_access_key_id = cnf["s3"]["aws_access_key_id"]
