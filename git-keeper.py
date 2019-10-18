@@ -26,12 +26,6 @@ tar = sh.tar.bake('-cf')
 workdir = 'workdir'
 
 
-def upload2s3(s3_client, repo_tar, git_keeper_bucket, subfolder,
-              date, object_name):
-    s3_client.upload_file(repo_tar, git_keeper_bucket,
-                          os.path.join(subfolder, date, object_name))
-
-
 def cleanwrkdir(workdir):
     shutil.rmtree(workdir, ignore_errors=True)
     os.makedirs(workdir, exist_ok=True)
@@ -69,8 +63,10 @@ def git_clone_upload(s3_client, gpg, recipients,
             output=repo_gpg,
             armor=False,
             always_trust=True)
-    upload2s3(s3_client, repo_gpg, s3_bucket, subfolder, date,
-              urlparse(repo_url).netloc + urlparse(repo_url).path + '.tar.gpg')
+    object_name = urlparse(repo_url).netloc + \
+        urlparse(repo_url).path + '.tar.gpg'
+    s3_client.upload_file(repo_gpg, s3_bucket, os.path.join(
+        subfolder, date, object_name))
     cleanwrkdir(workdir)
 
 
