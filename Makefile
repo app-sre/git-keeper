@@ -11,7 +11,7 @@ endif
 .PHONY: test
 test:
 	docker build -f dockerfiles/Dockerfile.test -t $(IMAGE_SHORT_NAME)-test:latest .
-	docker run -rm $(IMAGE_SHORT_NAME)-test:latest tox
+	docker run --rm $(IMAGE_SHORT_NAME)-test:latest tox
 
 .PHONY: build
 build:
