@@ -26,9 +26,22 @@ echo "$CONFIG_TOML" | base64 -d > $CONFIG_DIR/config.toml
 echo "$CONFIG_NETRC" | base64 -d > $CONFIG_DIR/.netrc
 chmod 0666 $CONFIG_DIR/.netrc
 
+# determine subpath for S3 based on date
+# daily, weekly or monthly backup folders with different retention policy
+SUBPATH='backups/daily'
+WEEKDAY=$(LC_TIME=C date +%A)
+MONTHDAY=$(date +%d)
+if [ "$WEEKDAY" = "Monday" ]
+    then SUBPATH='backups/weekly'
+fi
+if [ "$MONTHDAY" -eq 1 ]
+    then SUBPATH='backups/montly'
+fi
+
 cat repos.txt | docker run --rm -i \
             -e GIT_SSL_NO_VERIFY=true \
             -v $CONFIG_DIR:/config:z \
             quay.io/app-sre/git-keeper:latest \
             --config /config/config.toml \
             --gpgs /config/gpg_keys
+            --subfolder $SUBPATH
