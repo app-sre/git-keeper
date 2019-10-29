@@ -28,14 +28,15 @@ chmod 0666 $CONFIG_DIR/.netrc
 
 # determine subpath for S3 based on date
 # daily, weekly or monthly backup folders with different retention policy
-SUBPATH='backups/daily'
-WEEKDAY=$(LC_TIME=C date +%A)
+# if both 1st day of month and Monday - goes to monthly backups
+WEEKDAY=$(date +%w)
 MONTHDAY=$(date +%d)
-if [ "$WEEKDAY" = "Monday" ]
-    then SUBPATH='backups/weekly'
-fi
-if [ "$MONTHDAY" -eq 1 ]
-    then SUBPATH='backups/montly'
+if [ "$MONTHDAY" -eq 1 ]; then
+    SUBPATH='backups/monthly'
+elif [ "$WEEKDAY" -eq 1 ]; then
+    SUBPATH='backups/weekly'
+else
+    SUBPATH='backups/daily'
 fi
 
 cat repos.txt | docker run --rm -i \
@@ -43,5 +44,5 @@ cat repos.txt | docker run --rm -i \
             -v $CONFIG_DIR:/config:z \
             quay.io/app-sre/git-keeper:latest \
             --config /config/config.toml \
-            --gpgs /config/gpg_keys
+            --gpgs /config/gpg_keys \
             --subfolder $SUBPATH
