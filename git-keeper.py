@@ -96,12 +96,17 @@ def main():
     recipients = [k['fingerprint'] for k in gpg.list_keys()]
 
     repolist = sys.stdin.read().splitlines()
+    error = False
     for repo in repolist:
         try:
             git_clone_upload(s3_client, gpg, recipients, repo,
                              s3_bucket, args.subfolder, date)
         except Exception as e:
+            error = True
             logging.error(e)
+
+    if error:
+        sys.exit(1)
 
 
 if __name__ == '__main__':
