@@ -21,7 +21,7 @@ import argparse
 from urllib.parse import urlparse
 
 # bake some commands
-mirror = sh.git.clone.bake('--mirror')
+clone_repo = sh.git.clone.bake('--mirror')
 tar = sh.tar.bake('-cf')
 workdir = 'workdir'
 
@@ -29,10 +29,6 @@ workdir = 'workdir'
 def cleanwrkdir(workdir):
     shutil.rmtree(workdir, ignore_errors=True)
     os.makedirs(workdir, exist_ok=True)
-
-
-def clone_repo(repo_url, repo_dir):
-    mirror(repo_url, repo_dir)
 
 
 def get_s3_client(aws_access_key_id, aws_secret_access_key):
