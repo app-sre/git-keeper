@@ -39,6 +39,7 @@ else
     SUBPATH='backups/daily'
 fi
 
+docker pull quay.io/app-sre/git-keeper:latest
 cat repos.txt | docker run --rm -i \
             -e GIT_SSL_NO_VERIFY=true \
             -v $CONFIG_DIR:/config:z \
