@@ -29,15 +29,12 @@ chmod 0666 $CONFIG_DIR/.netrc
 
 # determine subpath for S3 based on date
 # daily, weekly or monthly backup folders with different retention policy
-# if both 1st day of month and Monday - goes to monthly backups
-WEEKDAY=$(date +%w)
-MONTHDAY=$(date +%d)
-if [ "$MONTHDAY" -eq 1 ]; then
-    SUBPATH='backups/monthly'
-elif [ "$WEEKDAY" -eq 1 ]; then
-    SUBPATH='backups/weekly'
-else
-    SUBPATH='backups/daily'
+SUBPATHS='backups/daily'
+if [ "$(date +%d)" -eq 1 ]; then
+    SUBPATHS="$SUBPATHS,backups/monthly"
+fi
+if [ "$(date +%w)" -eq 1 ]; then
+    SUBPATHS="$SUBPATHS,backups/weekly"
 fi
 
 docker pull $IMAGE
@@ -47,4 +44,4 @@ cat repos.txt | docker run --rm -i \
             $IMAGE \
             --config /config/config.toml \
             --gpgs /config/gpg_keys \
-            --subfolder $SUBPATH
+            --subfolders $SUBPATHS
