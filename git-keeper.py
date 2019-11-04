@@ -44,7 +44,7 @@ def get_s3_client(aws_access_key_id, aws_secret_access_key):
 
 
 def git_clone_upload(s3_client, gpg, recipients,
-                     repo_url, s3_bucket, subfolder, date):
+                     repo_url, s3_bucket, subfolders, date):
     if not repo_url.endswith('.git'):
         repo_url = repo_url + '.git'
     repo_dir = os.path.join(workdir, os.path.basename(repo_url))
@@ -61,8 +61,9 @@ def git_clone_upload(s3_client, gpg, recipients,
             always_trust=True)
     object_name = urlparse(repo_url).netloc + \
         urlparse(repo_url).path + '.tar.gpg'
-    s3_client.upload_file(repo_gpg, s3_bucket, os.path.join(
-        subfolder, date, object_name))
+    for subfolder in subfolders:
+        s3_client.upload_file(repo_gpg, s3_bucket, os.path.join(
+            subfolder, date, object_name))
     cleanwrkdir(workdir)
 
 
@@ -73,9 +74,11 @@ def main():
                         help='Path of configuration TOML file')
     parser.add_argument('--gpgs', type=str, required=True,
                         help='Path of GPG keys file')
-    parser.add_argument('--subfolder', type=str, default='',
-                        help='Path of subfolder in bucket to store backups')
+    parser.add_argument('--subfolders', type=str, default='',
+                        help='Path of [comma delimited] subfolder[s]'
+                        ' in bucket to store backups')
     args = parser.parse_args()
+    subfolders = [str(subfolder) for subfolder in args.subfolders.split(',')]
 
     cnf = toml.load(open(args.config))
     aws_access_key_id = cnf["s3"]["aws_access_key_id"]
@@ -96,7 +99,7 @@ def main():
     for repo in repolist:
         try:
             git_clone_upload(s3_client, gpg, recipients, repo,
-                             s3_bucket, args.subfolder, date)
+                             s3_bucket, subfolders, date)
         except Exception as e:
             error = True
             logging.error(e)
