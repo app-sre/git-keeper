@@ -10,6 +10,7 @@
 # - $GITLAB_SERVER
 # - $GITLAB_TOKEN
 
+IMAGE='quay.io/app-sre/git-keeper:latest'
 CONFIG_DIR="$PWD/config"
 mkdir -p $CONFIG_DIR/
 
@@ -39,11 +40,11 @@ else
     SUBPATH='backups/daily'
 fi
 
-docker pull quay.io/app-sre/git-keeper:latest
+docker pull $IMAGE
 cat repos.txt | docker run --rm -i \
             -e GIT_SSL_NO_VERIFY=true \
             -v $CONFIG_DIR:/config:z \
-            quay.io/app-sre/git-keeper:latest \
+            $IMAGE \
             --config /config/config.toml \
             --gpgs /config/gpg_keys \
             --subfolder $SUBPATH
