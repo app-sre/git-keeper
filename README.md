@@ -11,7 +11,7 @@ cat repolist | docker run --rm -i -v /home/user/github/git-keeper/config:/config
     quay.io/app-sre/git-keeper:latest \
     --config /config/gk_tomls \
     --gpgs /config/gpg \
-    --subfolders backups/weeklytest1,backups/weeklytest2
+    --subfolders backups/weeklytest1,backups/weeklytest2,backups/daily
 ```
 
 ## Help output
@@ -36,7 +36,7 @@ config.toml simple content
 ```
 [s3]
 aws_access_key_id = "AKISOMETHINGFAKE"
-aws_secret_access_key = "WERYFAKEKEY_PUTYOURS"
+aws_secret_access_key = "VERYFAKEKEY_PUT_YOURS"
 bucket = "bucket-for-testing"
 ```
 gpg key is just armored public key[s] for encryption, like:
@@ -63,6 +63,19 @@ password somesecretword
 ```
 image contain symlink to /config.netrc file so content will be used by console `git` command when clonning private repos.
 
+## Usage
+Utility is supposed to run inside docker container and accept list of repositories to backup via pipe
+
+## building/testing
+For testing python parts with tox just `make test`
+
+For building localy `make build`
+
+`make push` will push to your image registry
+
 ## Future enchantments
-Using host PKI folder so no need to set `-e GIT_SSL_NO_VERIFY=true` for docker run command
-?
+- Using host PKI folder so no need to set `-e GIT_SSL_NO_VERIFY=true` for docker run command
+- Find a way to restore pull-request to github/gitlab
+- Backup issues, wiki pages
+- More error handling/reporting, tests
+- ?
