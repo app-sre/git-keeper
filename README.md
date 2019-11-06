@@ -1,18 +1,8 @@
 # git-keeper
 
 ## Purpose
-This utility is ment to backup git repositories.
-Repositories are clonned in `--mirror` mode, `tar`-ed and `gpg` encrypted, then uploaded to S3 bucket
-
-## Simple example of using docker image
-```
-cat repolist | docker run --rm -i -v /home/user/github/git-keeper/config:/config:z \
-    -e GIT_SSL_NO_VERIFY=true \
-    quay.io/app-sre/git-keeper:latest \
-    --config /config/gk_tomls \
-    --gpgs /config/gpg \
-    --subfolders backups/weeklytest1,backups/weeklytest2,backups/daily
-```
+This utility is for backing up git repositories.
+Repositories are cloned in `--mirror` mode, `tar`-ed and `gpg` encrypted, then uploaded to an S3 bucket
 
 ## Help output
 ```bash
@@ -51,7 +41,7 @@ mQ.....
 
 -----END PGP PUBLIC KEY BLOCK-----
 ```
-Optional `--subfolders` parameter can take several pathes.
+Optional `--subfolders` parameter can take several paths.
 This is useful if you want put same backups in different folders with different retention policies.
 
 ### config/.netrc file
@@ -61,21 +51,41 @@ machine gitlab.your.company.com
 login automated-backups
 password somesecretword
 ```
-image contain symlink to /config.netrc file so content will be used by console `git` command when clonning private repos.
+image contains a symlink to /config/.netrc file so content will be used by console `git` command when cloning private repos.
 
 ## Usage
 Utility is supposed to run inside docker container and accept list of repositories to backup via pipe
+
+## Simple example of using docker image
+```
+cat repolist | docker run --rm -i -v $PWD/config:/config:z \
+    -e GIT_SSL_NO_VERIFY=true \
+    quay.io/app-sre/git-keeper:latest \
+    --config /config/gk_tomls \
+    --gpgs /config/gpg \
+    --subfolders backups/weeklytest1,backups/weeklytest2,backups/daily
+```
+repolist must contains just one repo per line, similar to:
+```
+https://github.com/app-sre/git-keeper
+https://github.com/username/project
+``` 
 
 ## building/testing
 For testing python parts with tox just `make test`
 
 For building localy `make build`
 
-`make push` will push to your image registry
+This will create local image `quay.io/app-sre/git-keeper:latest`
 
-## Future enchantments
+If you need to publish image you may edit Makefile changing first 2 lines or just retag and push built image to your repo:
+```
+docker tag quay.io/app-sre/git-keeper:latest your.intranet.registry/your-project/git-keeper:latest
+docker push your.intranet.registry/your-project/git-keeper:latest
+```
+
+## Future enhancements
 - Using host PKI folder so no need to set `-e GIT_SSL_NO_VERIFY=true` for docker run command
 - Find a way to restore pull-request to github/gitlab
 - Backup issues, wiki pages
-- More error handling/reporting, tests
-- ?
+- Better logging
