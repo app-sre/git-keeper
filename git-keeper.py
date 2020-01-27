@@ -104,6 +104,7 @@ def main():
     gpg.import_keys(key_data)
     recipients = [k['fingerprint'] for k in gpg.list_keys()]
 
+    logger.info('Process started')
     repolist = sys.stdin.read().splitlines()
     error = False
     for repo in repolist:
@@ -111,8 +112,15 @@ def main():
             git_clone_upload(s3_client, gpg, recipients, repo,
                              s3_bucket, subfolders, date)
         except Exception as e:
-            error = True
-            logging.error(e)
+            GitHubPrivateRepoErrorText = (
+                "fatal: could not read Username for 'https://github.com': "
+                "No such device or address"
+            )
+            if GitHubPrivateRepoErrorText not in str(e):
+                error = True
+                logging.error(e)
+            else:
+                logger.warning('Skipping private github repo: %s', repo)
 
     if error:
         sys.exit(1)
