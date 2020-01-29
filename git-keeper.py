@@ -112,11 +112,11 @@ def main():
             git_clone_upload(s3_client, gpg, recipients, repo,
                              s3_bucket, subfolders, date)
         except Exception as e:
-            GitHubPrivateRepoErrorText = (
+            git_hub_private_repo_error_text = (
                 "fatal: could not read Username for 'https://github.com': "
                 "No such device or address"
             )
-            if GitHubPrivateRepoErrorText not in str(e):
+            if git_hub_private_repo_error_text not in str(e):
                 error = True
                 logging.error(e)
             else:
