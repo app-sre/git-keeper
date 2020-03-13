@@ -96,7 +96,7 @@ def main():
     s3_bucket = cnf["s3"]["bucket"]
     s3_client = get_s3_client(aws_access_key_id, aws_secret_access_key)
 
-    date = datetime.now().strftime('%Y-%m-%d')
+    date = datetime.now().strftime('%Y-%m-%d--%H-%M')
 
     gpg = gnupg.GPG()
     with open(args.gpgs) as f:
