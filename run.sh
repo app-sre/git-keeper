@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Required secrets (vault env vars)
 # - $CONFIG_TOML
 # - $GPG_KEYS
@@ -13,6 +15,9 @@
 IMAGE='quay.io/app-sre/git-keeper:latest'
 CONFIG_DIR="$PWD/config"
 mkdir -p $CONFIG_DIR/
+
+# fix for expired Let's Encrypt (DST) Root certificate
+export REQUESTS_CA_BUNDLE=/etc/pki/tls/cert.pem
 
 # get repos
 ./repos.py > repos.txt
