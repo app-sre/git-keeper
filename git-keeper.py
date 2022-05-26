@@ -77,6 +77,13 @@ def git_clone_upload(s3_client, gpg, recipients,
     cleanwrkdir(workdir)
 
 
+# todo: qontractServerClient here
+
+
+def performGitMirroring(qontractServerClient):
+  # todo
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Configuration TOML and GPG keys locations.')
@@ -87,6 +94,8 @@ def main():
     parser.add_argument('--subfolders', type=str, default='',
                         help='Path of [comma delimited] subfolder[s]'
                         ' in bucket to store backups')
+    parser.add_argument('--git-mirroring-enabled', type=bool, default='',
+                          help='If TRUE: git-keeper will perform graphQL queries to a qontract-server URL to gather codeComponent items with mirror URLs defined. For each such codeComponent, git-keeper will treat `url` as the mirror destination, and `mirror` is the mirror source. git-keeper will get the content to restore from the git-keeper backup S3 bucket and upload it to the git mirror.')
     args = parser.parse_args()
     subfolders = [str(subfolder) for subfolder in args.subfolders.split(',')]
 
@@ -121,6 +130,30 @@ def main():
                 logging.error(e)
             else:
                 logger.warning('Skipping private github repo: %s', repo)
+
+    gitMirroringEnabled = cnf["git-mirroring-enabled"]
+    qontractServerUrl = cnf["qontract-server-url"]
+    qontractServerToken = cnf["qontract-server-token"]
+
+    if gitMirroringEnabled {
+      cancelGitMirroring = false
+
+      if qontractServerUrl == "" {
+        logging.error('git-mirroring is enabled, but a qontract-server-url is not defined. Either git-mirroring must be disabled, or a qontract-sever-url must be defined.')
+        cancelGitMirroring = true
+      }
+
+      if qontractServerToken == "" {
+        logging.error('git-mirroring is enabled, but a qontract-server-token is not defined. Either git-mirroring must be disabled, or a qontract-sever-token must be defined.')
+        cancelGitMirroring = true
+      }
+
+      if cancelGitMirroring == false {
+        qontractServerClient = NewQontractServerClient(qontractServerUrl, qontractServerToken)
+        performGitMirroring(qontractServerClient)
+      }
+
+    }
 
     if error:
         sys.exit(1)
