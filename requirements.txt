@@ -3,3 +3,5 @@ boto3
 python-gnupg
 toml
 argparse
+gql == 3.1.0
+requests == 2.22.0

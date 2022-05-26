@@ -29,6 +29,10 @@ tar = sh.tar.bake('-cf')
 workdir = 'workdir'
 
 
+
+
+
+
 def cleanwrkdir(workdir):
     shutil.rmtree(workdir, ignore_errors=True)
     os.makedirs(workdir, exist_ok=True)
@@ -77,11 +81,12 @@ def git_clone_upload(s3_client, gpg, recipients,
     cleanwrkdir(workdir)
 
 
-# todo: qontractServerClient here
-
-
 def performGitMirroring(qontractServerClient):
-  # todo
+    codeComponents = qontractServerClient.getAllCodeComponentsWithMirroring()
+    # error handling
+
+    # for each component in codeComponents
+    restoreGitBackup()
 
 
 def main():
