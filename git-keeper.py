@@ -31,6 +31,8 @@ tar = sh.tar.bake('-cf')
 workdir = 'workdir'
 
 
+
+
 def cleanwrkdir(workdir):
     shutil.rmtree(workdir, ignore_errors=True)
     os.makedirs(workdir, exist_ok=True)
@@ -48,6 +50,11 @@ def get_s3_client(aws_access_key_id, aws_secret_access_key):
     return s3_client
 
 
+def get_s3_object_name_from_git_repo_url(repo_url):
+    return urlparse(repo_url).netloc + \
+        urlparse(repo_url).path + '.tar.gpg'
+
+
 def git_clone_upload(s3_client, gpg, recipients,
                      repo_url, s3_bucket, subfolders, date):
     logger.info('Processing repo: %s', repo_url)
@@ -58,7 +65,7 @@ def git_clone_upload(s3_client, gpg, recipients,
     repo_tar = repo_dir + '.tar'
     logger.debug('Clearing workdir')
     cleanwrkdir(workdir)
-    logger.debug('Clonning repo')
+    logger.debug('Cloning repo')
     clone_repo(repo_url, repo_dir)
     logger.debug('TARing repo')
     tar(repo_tar, repo_dir)
@@ -70,8 +77,8 @@ def git_clone_upload(s3_client, gpg, recipients,
             output=repo_gpg,
             armor=False,
             always_trust=True)
-    object_name = urlparse(repo_url).netloc + \
-        urlparse(repo_url).path + '.tar.gpg'
+    object_name = \
+        get_s3_object_name_from_git_repo_url(repo_url)
     for subfolder in subfolders:
         logger.info('Uploading repo: %s to subfolder: %s', repo_gpg, subfolder)
         s3_client.upload_file(repo_gpg, s3_bucket, os.path.join(
@@ -79,16 +86,76 @@ def git_clone_upload(s3_client, gpg, recipients,
     cleanwrkdir(workdir)
 
 
-def restore_git_backup(source_url, target_url):
+def get_code_bundle_from_url(s3_bucket, s3_client, source_url):
+    code_bundle_file_path = ""
+    object_name = \
+        get_s3_object_name_from_git_repo_url(repo_url)
+    s3_client.get_file(s3_bucket, object_name) # fix this
+    # handle errors
+    return code_bundle_file_path
+    
+    
+def do_restore(code_bundle_file_path, target_url):
+    print(
+        f"pretending to push the contents of local filepath " +
+        f"{code_bundle_file_path} to {target_url}")
+    # gpg -d git-keeper.git.tar.gpg | tar xvf - # decrypt backup
+    # git remote set-url --push origin git@github.com:username/mirrored.git
+    # git push
+
+
+def restore_git_backup(s3_bucket, s3_client, cc):
+    source_url = cc.url
+    target_url = cc.mirror
+
     try:
-        code_bundle = get_code_bundle_from_url(source_url)
+        code_bundle_file_path = get_code_bundle(s3_bucket, s3_client, source_url)
     except Exception as e:
         throw error('failed to get code-bundle for git repo %s from s3 bucket, which was intended to be uploaded to target git repo %s', source_url, target_url)
 
     try:
-        do_restore(code_bundle, target_url)
+        do_restore(code_bundle_file_path, target_url)
     except Exception as e:
         throw error('failed to force upload (restore) git code-bundle from source %s to target %s', source_url, target_url)
+
+
+def perform_git_backup_uploading(s3_bucket, s3_client):
+    success = True
+    repolist = sys.stdin.read().splitlines()
+    for repo in repolist:
+        try:
+            git_clone_upload(s3_client, gpg, recipients, repo,
+                             s3_bucket, subfolders, date)
+        except Exception as e:
+            git_hub_private_repo_error_text = (
+                "fatal: could not read Username for 'https://github.com': "
+                "No such device or address"
+            )
+            if git_hub_private_repo_error_text not in str(e):
+                success = False
+                logging.error(e)
+            else:
+                logger.warning('Skipping private github repo: %s', repo)
+    return success
+
+
+def perform_git_mirroring(s3_bucket, s3_client, gql_url, gql_token):
+
+    gqlClient = GraphQLClient(gql_url, gql_token)
+
+    try:
+        codeComponents = gqlClient.getAllCodeComponentsWithMirroring()
+    except Exception as e:
+        logging.error('Failed to get GraphQL App CodeComponents: ' + e)
+        return False
+
+    for cc in codeComponents:
+        try:
+            restore_git_backup(s3_bucket, s3_client, cc)
+        except Except as e:
+            logging.error(e)
+
+    return True
 
 
 def main():
@@ -101,8 +168,8 @@ def main():
     parser.add_argument('--subfolders', type=str, default='',
                         help='Path of [comma delimited] subfolder[s]'
                         ' in bucket to store backups')
-    parser.add_argument('--git-mirroring-enabled', type=bool, default='',
-                          help='If TRUE: git-keeper will perform graphQL queries to a qontract-server URL to gather codeComponent items with mirror URLs defined. For each such codeComponent, git-keeper will treat `url` as the mirror destination, and `mirror` is the mirror source. git-keeper will get the content to restore from the git-keeper backup S3 bucket and upload it to the git mirror.')
+    parser.add_argument('--git_mirroring_enabled', type=bool, default='',
+                          help='If TRUE: git-keeper will perform graphQL queries to a gql_url to gather codeComponent items with mirror URLs defined. For each such codeComponent, git-keeper will treat `url` as the mirror destination, and `mirror` is the mirror source. git-keeper will get the content to restore from the git-keeper backup S3 bucket and upload it to the git mirror. git-keeper will NOT upload data to s3 buckets')
     args = parser.parse_args()
     subfolders = [str(subfolder) for subfolder in args.subfolders.split(',')]
 
@@ -111,6 +178,8 @@ def main():
     aws_secret_access_key = cnf["s3"]["aws_secret_access_key"]
     s3_bucket = cnf["s3"]["bucket"]
     s3_client = get_s3_client(aws_access_key_id, aws_secret_access_key)
+    gql_url = cnf["gql_url"]
+    gql_token = cnf["gql_token"]
 
     date = datetime.now().strftime('%Y-%m-%d--%H-%M')
 
@@ -121,60 +190,23 @@ def main():
     recipients = [k['fingerprint'] for k in gpg.list_keys()]
 
     logger.info('Process started')
-    repolist = sys.stdin.read().splitlines()
-    error = False
-    for repo in repolist:
-        try:
-            git_clone_upload(s3_client, gpg, recipients, repo,
-                             s3_bucket, subfolders, date)
-        except Exception as e:
-            git_hub_private_repo_error_text = (
-                "fatal: could not read Username for 'https://github.com': "
-                "No such device or address"
-            )
-            if git_hub_private_repo_error_text not in str(e):
-                error = True
-                logging.error(e)
-            else:
-                logger.warning('Skipping private github repo: %s', repo)
 
-    gitMirroringEnabled = cnf["git-mirroring-enabled"]
-    qontractServerUrl = cnf["qontract-server-url"]
-    qontractServerToken = cnf["qontract-server-token"]
+    success = True
+    git_mirroring_enabled = args.git_mirroring_enabled
+    if git_mirroring_enabled == False:
+        perform_git_backup_uploading(s3_bucket, s3_client)
+    else:
+        if gql_url == "":
+            logging.error('git-mirroring is enabled, but a gql-url is not defined. Either git-mirroring must be disabled, or a qontract-sever-url must be defined.')
+            success = False
 
-    if gitMirroringEnabled {
-        cancel_git_mirroring = false
+        if gql_token == "":
+            logging.error('git-mirroring is enabled, but a gql-token is not defined. Either git-mirroring must be disabled, or a qontract-sever-token must be defined.')
+            success = False
+        if success == True:
+            perform_git_mirroring(s3_bucket, s3_client, gql_url, gql_token)
 
-        if qontractServerUrl == "" {
-          logging.error('git-mirroring is enabled, but a qontract-server-url is not defined. Either git-mirroring must be disabled, or a qontract-sever-url must be defined.')
-          cancel_git_mirroring = true
-        }
-
-        if qontractServerToken == "" {
-          logging.error('git-mirroring is enabled, but a qontract-server-token is not defined. Either git-mirroring must be disabled, or a qontract-sever-token must be defined.')
-          cancel_git_mirroring = true
-        }
-
-        if cancel_git_mirroring == false {
-            gqlClient = GraphQLClient(qontractServerUrl, qontractServerToken)
-
-            try:
-                codeComponents = gqlClient.getAllCodeComponentsWithMirroring()
-            except Exception as e:
-                logging.error('Failed to get GraphQL App CodeComponents: ' + e)
-                cancel_git_mirroring = true
-
-            if cancel_git_mirroring == false {
-                for cc in codeComponents:
-                    try:
-                        restore_git_backup()
-                    except Except as e:
-                        logging.error(e)
-            }
-        }
-    }
-
-    if error:
+    if success == False:
         sys.exit(1)
 
 
