@@ -18,6 +18,8 @@ import sys
 import gnupg
 import toml
 import argparse
+
+from gql_queries import GraphQLClient, CodeComponent
 from urllib.parse import urlparse
 
 logging.basicConfig(level=logging.INFO)
@@ -27,10 +29,6 @@ logger = logging.getLogger(__name__)
 clone_repo = sh.git.clone.bake('--mirror')
 tar = sh.tar.bake('-cf')
 workdir = 'workdir'
-
-
-
-
 
 
 def cleanwrkdir(workdir):
@@ -81,12 +79,16 @@ def git_clone_upload(s3_client, gpg, recipients,
     cleanwrkdir(workdir)
 
 
-def performGitMirroring(qontractServerClient):
-    codeComponents = qontractServerClient.getAllCodeComponentsWithMirroring()
-    # error handling
+def restore_git_backup(source_url, target_url):
+    try:
+        code_bundle = get_code_bundle_from_url(source_url)
+    except Exception as e:
+        throw error('failed to get code-bundle for git repo %s from s3 bucket, which was intended to be uploaded to target git repo %s', source_url, target_url)
 
-    # for each component in codeComponents
-    restoreGitBackup()
+    try:
+        do_restore(code_bundle, target_url)
+    except Exception as e:
+        throw error('failed to force upload (restore) git code-bundle from source %s to target %s', source_url, target_url)
 
 
 def main():
@@ -141,23 +143,35 @@ def main():
     qontractServerToken = cnf["qontract-server-token"]
 
     if gitMirroringEnabled {
-      cancelGitMirroring = false
+        cancel_git_mirroring = false
 
-      if qontractServerUrl == "" {
-        logging.error('git-mirroring is enabled, but a qontract-server-url is not defined. Either git-mirroring must be disabled, or a qontract-sever-url must be defined.')
-        cancelGitMirroring = true
-      }
+        if qontractServerUrl == "" {
+          logging.error('git-mirroring is enabled, but a qontract-server-url is not defined. Either git-mirroring must be disabled, or a qontract-sever-url must be defined.')
+          cancel_git_mirroring = true
+        }
 
-      if qontractServerToken == "" {
-        logging.error('git-mirroring is enabled, but a qontract-server-token is not defined. Either git-mirroring must be disabled, or a qontract-sever-token must be defined.')
-        cancelGitMirroring = true
-      }
+        if qontractServerToken == "" {
+          logging.error('git-mirroring is enabled, but a qontract-server-token is not defined. Either git-mirroring must be disabled, or a qontract-sever-token must be defined.')
+          cancel_git_mirroring = true
+        }
 
-      if cancelGitMirroring == false {
-        qontractServerClient = NewQontractServerClient(qontractServerUrl, qontractServerToken)
-        performGitMirroring(qontractServerClient)
-      }
+        if cancel_git_mirroring == false {
+            gqlClient = GraphQLClient(qontractServerUrl, qontractServerToken)
 
+            try:
+                codeComponents = gqlClient.getAllCodeComponentsWithMirroring()
+            except Exception as e:
+                logging.error('Failed to get GraphQL App CodeComponents: ' + e)
+                cancel_git_mirroring = true
+
+            if cancel_git_mirroring == false {
+                for cc in codeComponents:
+                    try:
+                        restore_git_backup()
+                    except Except as e:
+                        logging.error(e)
+            }
+        }
     }
 
     if error:
