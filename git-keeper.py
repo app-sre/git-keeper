@@ -19,7 +19,7 @@ import gnupg
 import toml
 import argparse
 
-from gql_queries import GraphQLClient, CodeComponent
+from gql-queries import GraphQLClient, CodeComponent
 from urllib.parse import urlparse
 
 logging.basicConfig(level=logging.INFO)
@@ -29,8 +29,6 @@ logger = logging.getLogger(__name__)
 clone_repo = sh.git.clone.bake('--mirror')
 tar = sh.tar.bake('-cf')
 workdir = 'workdir'
-
-
 
 
 def cleanwrkdir(workdir):
@@ -70,6 +68,9 @@ def git_clone_upload(s3_client, gpg, recipients,
     logger.debug('TARing repo')
     tar(repo_tar, repo_dir)
     repo_gpg = repo_tar + '.gpg'
+
+    recipients = [k['fingerprint'] for k in gpg.list_keys()]
+
     with open(repo_tar, 'rb') as f:
         logger.debug('Encrypting repo\'s tar')
         gpg.encrypt_file(
@@ -86,19 +87,24 @@ def git_clone_upload(s3_client, gpg, recipients,
     cleanwrkdir(workdir)
 
 
-def get_code_bundle_from_url(s3_bucket, s3_client, source_url):
-    code_bundle_file_path = ""
+def get_code_bundle_from_url(s3_bucket, s3_client, repo_url):
+
     object_name = \
         get_s3_object_name_from_git_repo_url(repo_url)
-    s3_client.get_file(s3_bucket, object_name) # fix this
-    # handle errors
-    return code_bundle_file_path
+    code_bundle_file_name = object_name
+    try:
+        s3_client.download_file(s3_bucket, object_name, code_bundle_file_name)
+    except Exception as e:
+        raise ValueError( \
+          f"failed to get s3 object '{object_name}' from s3 bucket " +
+          f"'{s3_bucket}'")
+    return code_bundle_file_name
     
     
-def do_restore(code_bundle_file_path, target_url):
+def do_restore(code_bundle_file_name, target_url):
     print(
         f"pretending to push the contents of local filepath " +
-        f"{code_bundle_file_path} to {target_url}")
+        f"{code_bundle_file_name} to {target_url}")
     # gpg -d git-keeper.git.tar.gpg | tar xvf - # decrypt backup
     # git remote set-url --push origin git@github.com:username/mirrored.git
     # git push
@@ -109,22 +115,28 @@ def restore_git_backup(s3_bucket, s3_client, cc):
     target_url = cc.mirror
 
     try:
-        code_bundle_file_path = get_code_bundle(s3_bucket, s3_client, source_url)
+        code_bundle_file_name = \
+          get_code_bundle_from_url(s3_bucket, s3_client, source_url)
     except Exception as e:
-        throw error('failed to get code-bundle for git repo %s from s3 bucket, which was intended to be uploaded to target git repo %s', source_url, target_url)
+        raise ValueError( \
+          f"failed to get code-bundle for git repo {source_url} from s3 bucket, " +
+          f"which was intended to be uploaded to target git repo {target_url}")
 
     try:
-        do_restore(code_bundle_file_path, target_url)
+        do_restore(code_bundle_file_name, target_url)
     except Exception as e:
-        throw error('failed to force upload (restore) git code-bundle from source %s to target %s', source_url, target_url)
+        raise ValueError( \
+          f"failed to force upload (restore) git code-bundle from source " +
+          f"{source_url} to target {target_url}")
 
 
-def perform_git_backup_uploading(s3_bucket, s3_client):
-    success = True
+def perform_git_backup_uploading(s3_bucket, s3_client, gpg, subfolders, success):
+    date = datetime.now().strftime('%Y-%m-%d--%H-%M')
+
     repolist = sys.stdin.read().splitlines()
     for repo in repolist:
         try:
-            git_clone_upload(s3_client, gpg, recipients, repo,
+            git_clone_upload(s3_client, gpg, repo,
                              s3_bucket, subfolders, date)
         except Exception as e:
             git_hub_private_repo_error_text = (
@@ -152,10 +164,20 @@ def perform_git_mirroring(s3_bucket, s3_client, gql_url, gql_token):
     for cc in codeComponents:
         try:
             restore_git_backup(s3_bucket, s3_client, cc)
-        except Except as e:
+        except Exception as e:
             logging.error(e)
 
     return True
+
+
+def validate_config_for_git_mirroring(success):
+    if gql_url == "":
+        logging.error('git-mirroring is enabled, but a gql-url is not defined. Either git-mirroring must be disabled, or a qontract-sever-url must be defined.')
+        success = False
+    if gql_token == "":
+        logging.error('git-mirroring is enabled, but a gql-token is not defined. Either git-mirroring must be disabled, or a qontract-sever-token must be defined.')
+        success = False
+    return success
 
 
 def main():
@@ -181,28 +203,19 @@ def main():
     gql_url = cnf["gql_url"]
     gql_token = cnf["gql_token"]
 
-    date = datetime.now().strftime('%Y-%m-%d--%H-%M')
-
     gpg = gnupg.GPG()
     with open(args.gpgs) as f:
         key_data = f.read()
     gpg.import_keys(key_data)
-    recipients = [k['fingerprint'] for k in gpg.list_keys()]
 
     logger.info('Process started')
 
     success = True
     git_mirroring_enabled = args.git_mirroring_enabled
     if git_mirroring_enabled == False:
-        perform_git_backup_uploading(s3_bucket, s3_client)
+        success = perform_git_backup_uploading(s3_bucket, s3_client, gpg, subfolders, success)
     else:
-        if gql_url == "":
-            logging.error('git-mirroring is enabled, but a gql-url is not defined. Either git-mirroring must be disabled, or a qontract-sever-url must be defined.')
-            success = False
-
-        if gql_token == "":
-            logging.error('git-mirroring is enabled, but a gql-token is not defined. Either git-mirroring must be disabled, or a qontract-sever-token must be defined.')
-            success = False
+        success = validate_config_for_git_mirroring(success)
         if success == True:
             perform_git_mirroring(s3_bucket, s3_client, gql_url, gql_token)
 

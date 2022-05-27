@@ -30,17 +30,14 @@ class GraphQLClient:
         code_components = []
         all_apps = self.get_all_apps()
         for app in all_apps:
-            if app.codeComponents {
-                for cc in app.codeComponents {
-                    if cc.mirroring {
+            if app.codeComponents:
+                for cc in app.codeComponents:
+                    if cc.mirroring:
                       code_components.push(CodeComponent(cc.url, cc.mirror))
-                    }
-                }
-            }
         return code_components
 
 
-    def get_all_apps():
+    def get_all_apps(self):
         result = self.get_all_apps_result()
         return result["apps"]
 
