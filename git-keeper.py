@@ -140,7 +140,7 @@ def perform_git_backup_uploading(
         try:
             git_clone_upload(s3_client, gpg, repo,
                              s3_bucket, subfolders, date)
-        except Exception:
+        except Exception as e:
             git_hub_private_repo_error_text = (
                 "fatal: could not read Username for 'https://github.com': "
                 "No such device or address"
@@ -172,7 +172,7 @@ def perform_git_mirroring(s3_bucket, s3_client, gql_url, gql_token):
     return True
 
 
-def validate_config_for_git_mirroring(success):
+def validate_config_for_git_mirroring(success, gql_url, gql_token):
     if gql_url == "":
         logging.error('git-mirroring is enabled, but a gql-url is not defined. +'
         'Either git-mirroring must be disabled, or a gql-url must be defined.')
@@ -229,7 +229,7 @@ def main():
     if git_mirroring_enabled is False:
         success = perform_git_backup_uploading(s3_bucket, s3_client, gpg, subfolders, success)
     else:
-        success = validate_config_for_git_mirroring(success)
+        success = validate_config_for_git_mirroring(success, gql_url, gql_token)
         if success is True:
             perform_git_mirroring(s3_bucket, s3_client, gql_url, gql_token)
 
