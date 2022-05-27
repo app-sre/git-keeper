@@ -175,15 +175,15 @@ def perform_git_mirroring(s3_bucket, s3_client, gql_url, gql_token):
 def validate_config_for_git_mirroring(success, gql_url, gql_token):
     if gql_url == "":
         logging.error('git-mirroring is enabled, ' +
-            'but a gql-url is not defined. ' +
-            'Either git-mirroring must be disabled, ' +
-            'or a gql-url must be defined.')
+                      'but a gql-url is not defined. ' +
+                      'Either git-mirroring must be disabled, ' +
+                      'or a gql-url must be defined.')
         success = False
     if gql_token == "":
         logging.error('git-mirroring is enabled, ' +
-            'but a gql-token is not defined. ' +
-            'Either git-mirroring must be disabled, ' +
-            'or a gql-token must be defined.')
+                      'but a gql-token is not defined. ' +
+                      'Either git-mirroring must be disabled, ' +
+                      'or a gql-token must be defined.')
         success = False
     return success
 
@@ -200,16 +200,16 @@ def main():
                         ' in bucket to store backups')
     parser.add_argument('--git_mirroring_enabled', type=bool, default='',
                           help='If TRUE: git-keeper will perform ' +
-                              'graphQL queries to a gql-url to gather ' +
-                              'codeComponent items with mirror URLs ' +
-                              'defined. For each such codeComponent, ' +
-                              'git-keeper will treat `url` as the ' +
-                              'mirror destination, and `mirror` is the' +
-                              ' mirror source. git-keeper will get the ' +
-                              'content to restore from the git-keeper ' +
-                              'backup S3 bucket and upload it to the ' +
-                              'git mirror. ' +
-                              'git-keeper will NOT upload data to s3 buckets')
+                                'graphQL queries to a gql-url to gather ' +
+                                'codeComponent items with mirror URLs ' +
+                                'defined. For each such codeComponent, ' +
+                                'git-keeper will treat `url` as the ' +
+                                'mirror destination, and `mirror` is the' +
+                                ' mirror source. git-keeper will get the ' +
+                                'content to restore from the git-keeper ' +
+                                'backup S3 bucket and upload it to the ' +
+                                'git mirror. ' +
+                                'git-keeper will NOT upload data to s3 buckets')
     args = parser.parse_args()
     subfolders = [str(subfolder) for subfolder in args.subfolders.split(',')]
 
