@@ -19,7 +19,7 @@ import gnupg
 import toml
 import argparse
 
-from gql_queries import GraphQLClient, CodeComponent
+from gql_queries import GraphQLClient
 from urllib.parse import urlparse
 
 logging.basicConfig(level=logging.INFO)
@@ -94,7 +94,7 @@ def get_code_bundle_from_url(s3_bucket, s3_client, repo_url):
     code_bundle_file_name = object_name
     try:
         s3_client.download_file(s3_bucket, object_name, code_bundle_file_name)
-    except Exception as e:
+    except Exception:
         raise ValueError(
           f"failed to get s3 object '{object_name}' from s3 bucket " +
           f"'{s3_bucket}'")
@@ -117,14 +117,15 @@ def restore_git_backup(s3_bucket, s3_client, cc):
     try:
         code_bundle_file_name = \
           get_code_bundle_from_url(s3_bucket, s3_client, source_url)
-    except Exception as e:
+    except Exception:
         raise ValueError(
-          f"failed to get code-bundle for git repo {source_url} from s3 bucket, " +
+          f"failed to get code-bundle for git repo {source_url} " +
+          "from s3 bucket, " +
           f"which was intended to be uploaded to target git repo {target_url}")
 
     try:
         do_restore(code_bundle_file_name, target_url)
-    except Exception as e:
+    except Exception:
         raise ValueError(
           f"failed to force upload (restore) git code-bundle from source " +
           f"{source_url} to target {target_url}")
@@ -139,7 +140,7 @@ def perform_git_backup_uploading(
         try:
             git_clone_upload(s3_client, gpg, repo,
                              s3_bucket, subfolders, date)
-        except Exception as e:
+        except Exception:
             git_hub_private_repo_error_text = (
                 "fatal: could not read Username for 'https://github.com': "
                 "No such device or address"
@@ -157,15 +158,15 @@ def perform_git_mirroring(s3_bucket, s3_client, gql_url, gql_token):
     gqlClient = GraphQLClient(gql_url, gql_token)
 
     try:
-        codeComponents = gqlClient.getAllCodeComponentsWithMirroring()
-    except Exception as e:
+        codeComponents = gqlClient.get_all_code_components_with_mirroring()
+    except Exception:
         logging.error('Failed to get GraphQL App CodeComponents: ' + e)
         return False
 
     for cc in codeComponents:
         try:
             restore_git_backup(s3_bucket, s3_client, cc)
-        except Exception as e:
+        except Exception:
             logging.error(e)
 
     return True
@@ -194,7 +195,17 @@ def main():
                         help='Path of [comma delimited] subfolder[s]'
                         ' in bucket to store backups')
     parser.add_argument('--git_mirroring_enabled', type=bool, default='',
-                          help='If TRUE: git-keeper will perform graphQL queries to a gql_url to gather codeComponent items with mirror URLs defined. For each such codeComponent, git-keeper will treat `url` as the mirror destination, and `mirror` is the mirror source. git-keeper will get the content to restore from the git-keeper backup S3 bucket and upload it to the git mirror. git-keeper will NOT upload data to s3 buckets')
+                          help='If TRUE: git-keeper will perform ' +
+                            'graphQL queries to a gql-url to gather ' +
+                            'codeComponent items with mirror URLs ' +
+                            'defined. For each such codeComponent, ' +
+                            'git-keeper will treat `url` as the ' +
+                            'mirror destination, and `mirror` is the' +
+                            ' mirror source. git-keeper will get the ' +
+                            'content to restore from the git-keeper ' +
+                            'backup S3 bucket and upload it to the ' +
+                            'git mirror. ' +
+                            'git-keeper will NOT upload data to s3 buckets')
     args = parser.parse_args()
     subfolders = [str(subfolder) for subfolder in args.subfolders.split(',')]
 
