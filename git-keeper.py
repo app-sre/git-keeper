@@ -48,9 +48,17 @@ def get_s3_client(aws_access_key_id, aws_secret_access_key):
     return s3_client
 
 
+def get_daily_backup_s3_dir_names(s3_client, s3_bucket):
+    # return paths at buckets/daily/*
+
+
 def get_s3_object_name_from_git_repo_url(repo_url):
     return urlparse(repo_url).netloc + \
         urlparse(repo_url).path + '.tar.gpg'
+
+
+def get_full_object_path_in_bucket(datetimestamp, object_name):
+    return f'backups/daily/{datetimestamp}/{object_name}'
 
 
 def git_clone_upload(s3_client, gpg, recipients,
