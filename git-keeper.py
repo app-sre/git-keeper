@@ -132,7 +132,7 @@ def restore_git_backup(s3_bucket, s3_client, cc):
 
 
 def perform_git_backup_uploading(
-    s3_bucket, s3_client, gpg, subfolders, success):
+  s3_bucket, s3_client, gpg, subfolders, success):
     date = datetime.now().strftime('%Y-%m-%d--%H-%M')
 
     repolist = sys.stdin.read().splitlines()
@@ -159,7 +159,7 @@ def perform_git_mirroring(s3_bucket, s3_client, gql_url, gql_token):
 
     try:
         codeComponents = gqlClient.get_all_code_components_with_mirroring()
-    except Exception:
+    except Exception as e:
         logging.error('Failed to get GraphQL App CodeComponents: ' + e)
         return False
 
@@ -174,12 +174,16 @@ def perform_git_mirroring(s3_bucket, s3_client, gql_url, gql_token):
 
 def validate_config_for_git_mirroring(success, gql_url, gql_token):
     if gql_url == "":
-        logging.error('git-mirroring is enabled, but a gql-url is not defined. +'
-        'Either git-mirroring must be disabled, or a gql-url must be defined.')
+        logging.error('git-mirroring is enabled, ' +
+          'but a gql-url is not defined. ' +
+          'Either git-mirroring must be disabled, ' +
+          'or a gql-url must be defined.')
         success = False
     if gql_token == "":
-        logging.error('git-mirroring is enabled, but a gql-token is not defined. +'
-        'Either git-mirroring must be disabled, or a gql-token must be defined.')
+        logging.error('git-mirroring is enabled, ' +
+          'but a gql-token is not defined. ' +
+          'Either git-mirroring must be disabled, ' +
+          'or a gql-token must be defined.')
         success = False
     return success
 
