@@ -19,6 +19,13 @@ mkdir -p $CONFIG_DIR/
 # fix for expired Let's Encrypt (DST) Root certificate
 export REQUESTS_CA_BUNDLE=/etc/pki/tls/cert.pem
 
+# setup requirements
+python3 -m venv venv
+
+source venv/bin/activate
+
+pip install -r requirements.txt
+
 # get repos
 ./repos.py > repos.txt
 
