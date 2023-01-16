@@ -23,11 +23,16 @@ optional arguments:
 
 ## Configuration examples
 config.toml simple content
-```
+```toml
 [s3]
 aws_access_key_id = "AKISOMETHINGFAKE"
 aws_secret_access_key = "VERYFAKEKEY_PUT_YOURS"
 bucket = "bucket-for-testing"
+
+# below two are OPTIONAL
+# example is for connecting to GovCloud S3 Bucket
+endpoint_url = "https://s3.us-gov-west-1.amazonaws.com"
+region_name = "us-gov-west-1"
 ```
 gpg key is just armored public key[s] for encryption, like:
 ```
