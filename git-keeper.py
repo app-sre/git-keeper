@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 #
 # git-keeper utility, used for backing up git repos to AWS S3
 # supported git providers github and gitlab
