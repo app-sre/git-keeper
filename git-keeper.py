@@ -34,12 +34,14 @@ def cleanwrkdir(workdir):
     os.makedirs(workdir, exist_ok=True)
 
 
-def get_s3_client(aws_access_key_id, aws_secret_access_key):
+def get_s3_client(aws_access_key_id, aws_secret_access_key, region_name, endpoint_url):
     try:
         s3_client = boto3.client(
             "s3",
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
+            region_name=region_name,
+            endpoint_url=endpoint_url,
         )
     except botocore.exceptions.NoCredentialsError:
         raise Exception("No AWS credentials found.")
@@ -97,7 +99,16 @@ def main():
     aws_access_key_id = cnf["s3"]["aws_access_key_id"]
     aws_secret_access_key = cnf["s3"]["aws_secret_access_key"]
     s3_bucket = cnf["s3"]["bucket"]
-    s3_client = get_s3_client(aws_access_key_id, aws_secret_access_key)
+
+    region_name = None
+    endpoint_url = None
+    if "endpoint_url" in cnf["s3"]:
+        endpoint_url = cnf["s3"]["endpoint_url"]
+    if "region_name" in cnf["s3"]:
+        region_name = cnf["s3"]["region_name"]
+    s3_client = get_s3_client(
+        aws_access_key_id, aws_secret_access_key, region_name, endpoint_url
+    )
 
     date = datetime.now().strftime("%Y-%m-%d--%H-%M")
 
