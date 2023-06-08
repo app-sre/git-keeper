@@ -19,6 +19,7 @@ import gnupg
 import toml
 import argparse
 from urllib.parse import urlparse
+from sretoolbox.utils import retry
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -50,6 +51,7 @@ def get_s3_client(aws_access_key_id, aws_secret_access_key, region_name, endpoin
     return s3_client
 
 
+@retry(max_attempts=5)
 def git_clone_upload(s3_client, gpg, recipients, repo_url, s3_bucket, subfolders, date):
     logger.info("Processing repo: %s", repo_url)
     if not repo_url.endswith(".git"):
