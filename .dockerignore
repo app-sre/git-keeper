@@ -3,3 +3,4 @@ README.md
 .git
 .tox
 dockerfiles
+.docker
