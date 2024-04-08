@@ -2,3 +2,4 @@ workdir
 repolist
 config/*
 repos.txt
+.docker

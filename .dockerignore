@@ -3,3 +3,8 @@ README.md
 .git
 .tox
 dockerfiles
+.docker
+workdir
+repolist
+config/*
+repos.txt
