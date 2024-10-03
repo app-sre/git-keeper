@@ -20,7 +20,6 @@ import toml
 import argparse
 from urllib.parse import urlparse
 from sretoolbox.utils import retry
-from sh import git
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,7 +28,6 @@ logger = logging.getLogger(__name__)
 clone_repo = sh.git.clone.bake("--mirror")
 tar = sh.tar.bake("-cf")
 workdir = "workdir"
-commit = False
 
 
 def cleanwrkdir(workdir):
@@ -54,7 +52,9 @@ def get_s3_client(aws_access_key_id, aws_secret_access_key, region_name, endpoin
 
 
 @retry(max_attempts=5)
-def git_clone_upload(s3_client, gpg, recipients, repo_url, s3_bucket, subfolders, sub_subfolder):
+def git_clone_upload(
+    s3_client, gpg, recipients, repo_url, s3_bucket, subfolders, sub_subfolder, commit
+):
     logger.info("Processing repo: %s", repo_url)
     if not repo_url.endswith(".git"):
         repo_url = repo_url + ".git"
@@ -75,7 +75,7 @@ def git_clone_upload(s3_client, gpg, recipients, repo_url, s3_bucket, subfolders
         )
     object_name = urlparse(repo_url).netloc + urlparse(repo_url).path + ".tar.gpg"
     if commit:
-        sha = git("--git-dir=" + repo_dir, "rev-parse", "--verify", "HEAD")
+        sha = sh.git("--git-dir=" + repo_dir, "rev-parse", "--verify", "HEAD")
         sub_subfolder = sha
     for subfolder in subfolders:
         logger.info("Uploading repo: %s to subfolder: %s", repo_gpg, subfolder)
@@ -106,7 +106,6 @@ def main():
     )
     args = parser.parse_args()
     subfolders = [str(subfolder) for subfolder in args.subfolders.split(",")]
-    global commit
     commit = args.commit
 
     cnf = toml.load(open(args.config))
@@ -138,7 +137,7 @@ def main():
     for repo in repolist:
         try:
             git_clone_upload(
-                s3_client, gpg, recipients, repo, s3_bucket, subfolders, date
+                s3_client, gpg, recipients, repo, s3_bucket, subfolders, date, commit
             )
         except Exception as e:
             git_hub_private_repo_error_text = (
