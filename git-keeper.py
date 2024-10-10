@@ -53,7 +53,7 @@ def get_s3_client(aws_access_key_id, aws_secret_access_key, region_name, endpoin
 
 @retry(max_attempts=5)
 def git_clone_upload(
-    s3_client, gpg, recipients, repo_url, s3_bucket, subfolders, sub_subfolder, commit
+    s3_client, gpg, recipients, repo_url, s3_bucket, subfolders, date, commit
 ):
     logger.info("Processing repo: %s", repo_url)
     if not repo_url.endswith(".git"):
@@ -74,9 +74,11 @@ def git_clone_upload(
             f, recipients=recipients, output=repo_gpg, armor=False, always_trust=True
         )
     object_name = urlparse(repo_url).netloc + urlparse(repo_url).path + ".tar.gpg"
-    if commit:
-        sha = sh.git("--git-dir=" + repo_dir, "rev-parse", "--verify", "HEAD")
-        sub_subfolder = sha
+    sub_subfolder = (
+        date + "-" + sh.git("--git-dir=" + repo_dir, "rev-parse", "--verify", "HEAD")
+        if commit
+        else date
+    )
     for subfolder in subfolders:
         logger.info("Uploading repo: %s to subfolder: %s", repo_gpg, subfolder)
         s3_client.upload_file(
