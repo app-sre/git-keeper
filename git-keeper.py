@@ -52,7 +52,9 @@ def get_s3_client(aws_access_key_id, aws_secret_access_key, region_name, endpoin
 
 
 @retry(max_attempts=5)
-def git_clone_upload(s3_client, gpg, recipients, repo_url, s3_bucket, subfolders, date):
+def git_clone_upload(
+    s3_client, gpg, recipients, repo_url, s3_bucket, subfolders, date, commit
+):
     logger.info("Processing repo: %s", repo_url)
     if not repo_url.endswith(".git"):
         repo_url = repo_url + ".git"
@@ -72,10 +74,15 @@ def git_clone_upload(s3_client, gpg, recipients, repo_url, s3_bucket, subfolders
             f, recipients=recipients, output=repo_gpg, armor=False, always_trust=True
         )
     object_name = urlparse(repo_url).netloc + urlparse(repo_url).path + ".tar.gpg"
+    sub_subfolder = (
+        date + "-" + sh.git("--git-dir=" + repo_dir, "rev-parse", "--verify", "HEAD")
+        if commit
+        else date
+    )
     for subfolder in subfolders:
         logger.info("Uploading repo: %s to subfolder: %s", repo_gpg, subfolder)
         s3_client.upload_file(
-            repo_gpg, s3_bucket, os.path.join(subfolder, date, object_name)
+            repo_gpg, s3_bucket, os.path.join(subfolder, sub_subfolder, object_name)
         )
     cleanwrkdir(workdir)
 
@@ -94,8 +101,14 @@ def main():
         default="",
         help="Path of [comma delimited] subfolder[s]" " in bucket to store backups",
     )
+    parser.add_argument(
+        "--commit",
+        action="store_true",
+        help="use SHA of last commit instead of date as sub-subfolder",
+    )
     args = parser.parse_args()
     subfolders = [str(subfolder) for subfolder in args.subfolders.split(",")]
+    commit = args.commit
 
     cnf = toml.load(open(args.config))
     aws_access_key_id = cnf["s3"]["aws_access_key_id"]
@@ -126,7 +139,7 @@ def main():
     for repo in repolist:
         try:
             git_clone_upload(
-                s3_client, gpg, recipients, repo, s3_bucket, subfolders, date
+                s3_client, gpg, recipients, repo, s3_bucket, subfolders, date, commit
             )
         except Exception as e:
             git_hub_private_repo_error_text = (
