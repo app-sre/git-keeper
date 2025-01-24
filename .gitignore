@@ -3,3 +3,5 @@ repolist
 config/*
 repos.txt
 .docker
+.venv/*
+build/

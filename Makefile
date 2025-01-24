@@ -10,12 +10,11 @@ endif
 
 .PHONY: test
 test:
-	docker build -f dockerfiles/Dockerfile.test -t $(IMAGE_SHORT_NAME)-test:latest .
-	docker run --rm $(IMAGE_SHORT_NAME)-test:latest tox
+	docker build -f dockerfiles/Dockerfile --target test -t $(IMAGE_SHORT_NAME)-test:latest .
 
 .PHONY: build
 build:
-	@docker build -f dockerfiles/Dockerfile -t $(IMAGE_NAME):latest .
+	@docker build -f dockerfiles/Dockerfile --target prod -t $(IMAGE_NAME):latest .
 	@docker tag $(IMAGE_NAME):latest $(IMAGE_NAME):$(IMAGE_TAG)
 
 .PHONY: push

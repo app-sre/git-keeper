@@ -7,18 +7,19 @@
 # and AWS S3 credentials in TOML
 # tested only on linux OS
 
-import os
-import sh
+import argparse
+import logging
+import shutil
+import sys
+from datetime import UTC, datetime
+from pathlib import Path
+from urllib.parse import urlparse
+
 import boto3
 import botocore
-import shutil
-import logging
-from datetime import datetime
-import sys
 import gnupg
+import sh
 import toml
-import argparse
-from urllib.parse import urlparse
 from sretoolbox.utils import retry
 
 logging.basicConfig(level=logging.INFO)
@@ -32,7 +33,15 @@ workdir = "workdir"
 
 def cleanwrkdir(workdir):
     shutil.rmtree(workdir, ignore_errors=True)
-    os.makedirs(workdir, exist_ok=True)
+    Path(workdir).mkdir(parents=True, exist_ok=True)
+
+
+class NoCredsError(Exception):
+    pass
+
+
+class InvalidCredsError(Exception):
+    pass
 
 
 def get_s3_client(aws_access_key_id, aws_secret_access_key, region_name, endpoint_url):
@@ -45,9 +54,9 @@ def get_s3_client(aws_access_key_id, aws_secret_access_key, region_name, endpoin
             endpoint_url=endpoint_url,
         )
     except botocore.exceptions.NoCredentialsError:
-        raise Exception("No AWS credentials found.")
+        raise NoCredsError("No AWS credentials found.") from None
     except botocore.exceptions.ClientError:
-        raise Exception("Invalid AWS credentials.")
+        raise InvalidCredsError("Invalid AWS credentials.") from None
     return s3_client
 
 
@@ -57,10 +66,10 @@ def git_clone_upload(
 ):
     logger.info("Processing repo: %s", repo_url)
     if not repo_url.endswith(".git"):
-        repo_url = repo_url + ".git"
+        repo_url += ".git"
         logger.debug("Appending .git to repo")
-    repo_dir = os.path.join(workdir, os.path.basename(repo_url))
-    repo_tar = repo_dir + ".tar"
+    repo_dir = Path(workdir) / Path(repo_url).name
+    repo_tar = str(repo_dir) + ".tar"
     logger.debug("Clearing workdir")
     cleanwrkdir(workdir)
     logger.debug("Clonning repo")
@@ -68,21 +77,23 @@ def git_clone_upload(
     logger.debug("TARing repo")
     tar(repo_tar, repo_dir)
     repo_gpg = repo_tar + ".gpg"
-    with open(repo_tar, "rb") as f:
+    with Path.open(repo_tar, "rb") as f:
         logger.debug("Encrypting repo's tar")
         gpg.encrypt_file(
             f, recipients=recipients, output=repo_gpg, armor=False, always_trust=True
         )
     object_name = urlparse(repo_url).netloc + urlparse(repo_url).path + ".tar.gpg"
     sub_subfolder = (
-        date + "-" + sh.git("--git-dir=" + repo_dir, "rev-parse", "--verify", "HEAD")
+        date
+        + "-"
+        + sh.git("--git-dir=" + str(repo_dir), "rev-parse", "--verify", "HEAD")
         if commit
         else date
     )
     for subfolder in subfolders:
         logger.info("Uploading repo: %s to subfolder: %s", repo_gpg, subfolder)
         s3_client.upload_file(
-            repo_gpg, s3_bucket, os.path.join(subfolder, sub_subfolder, object_name)
+            repo_gpg, s3_bucket, str(Path(subfolder) / sub_subfolder / object_name)
         )
     cleanwrkdir(workdir)
 
@@ -99,7 +110,7 @@ def main():
         "--subfolders",
         type=str,
         default="",
-        help="Path of [comma delimited] subfolder[s]" " in bucket to store backups",
+        help="Path of [comma delimited] subfolder[s] in bucket to store backups",
     )
     parser.add_argument(
         "--commit",
@@ -110,7 +121,7 @@ def main():
     subfolders = [str(subfolder) for subfolder in args.subfolders.split(",")]
     commit = args.commit
 
-    cnf = toml.load(open(args.config))
+    cnf = toml.load(Path.open(args.config))
     aws_access_key_id = cnf["s3"]["aws_access_key_id"]
     aws_secret_access_key = cnf["s3"]["aws_secret_access_key"]
     s3_bucket = cnf["s3"]["bucket"]
@@ -125,11 +136,12 @@ def main():
         aws_access_key_id, aws_secret_access_key, region_name, endpoint_url
     )
 
-    date = datetime.now().strftime("%Y-%m-%d--%H-%M")
+    logger = logging.getLogger(__name__)
+
+    date = datetime.now(tz=UTC).strftime("%Y-%m-%d--%H-%M")
 
     gpg = gnupg.GPG()
-    with open(args.gpgs) as f:
-        key_data = f.read()
+    key_data = Path(args.gpgs).read_text(encoding="utf-8")
     gpg.import_keys(key_data)
     recipients = [k["fingerprint"] for k in gpg.list_keys()]
 
@@ -148,7 +160,7 @@ def main():
             )
             if git_hub_private_repo_error_text not in str(e):
                 error = True
-                logging.error(e)
+                logger.exception("Found an error")
             else:
                 logger.warning("Skipping private github repo: %s", repo)
 
