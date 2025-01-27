@@ -50,7 +50,7 @@ def get_codecomponents():
 def get_gitlab_backup_orgs():
     data = gql_query(GITLAB_BACKUP_ORGS_QUERY)
 
-    # TODO @jmeles: this is a stop-gap measure. The proper fix is to return the url in
+    # TODO @jmelis: this is a stop-gap measure. The proper fix is to return the url in
     # the app-interface query and the token (vault secret).
     # 003
     if len(data["gitlabs"]) != 1:
