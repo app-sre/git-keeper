@@ -11,6 +11,7 @@ import argparse
 import logging
 import shutil
 import sys
+import tomllib
 from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlparse
@@ -19,7 +20,6 @@ import boto3
 import botocore
 import gnupg
 import sh
-import toml
 from sretoolbox.utils import retry
 
 logging.basicConfig(level=logging.INFO)
@@ -69,14 +69,14 @@ def git_clone_upload(
         repo_url += ".git"
         logger.debug("Appending .git to repo")
     repo_dir = Path(workdir) / Path(repo_url).name
-    repo_tar = str(repo_dir) + ".tar"
+    repo_tar = repo_dir.with_suffix(repo_dir.suffix + ".tar")
     logger.debug("Clearing workdir")
     cleanwrkdir(workdir)
     logger.debug("Clonning repo")
     clone_repo(repo_url, repo_dir)
     logger.debug("TARing repo")
     tar(repo_tar, repo_dir)
-    repo_gpg = repo_tar + ".gpg"
+    repo_gpg = repo_tar.with_suffix(repo_tar.suffix + ".gpg")
     with Path.open(repo_tar, "rb") as f:
         logger.debug("Encrypting repo's tar")
         gpg.encrypt_file(
@@ -121,7 +121,7 @@ def main():
     subfolders = [str(subfolder) for subfolder in args.subfolders.split(",")]
     commit = args.commit
 
-    cnf = toml.load(Path.open(args.config))
+    cnf = tomllib.load(Path.open(args.config, "rb"))
     aws_access_key_id = cnf["s3"]["aws_access_key_id"]
     aws_secret_access_key = cnf["s3"]["aws_secret_access_key"]
     s3_bucket = cnf["s3"]["bucket"]

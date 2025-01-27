@@ -54,8 +54,7 @@ def get_gitlab_backup_orgs():
     # the app-interface query and the token (vault secret).
     # 003
     if len(data["gitlabs"]) != 1:
-        raise ManyGitlabsError("Expecting only one gitlab.") from None
-
+        raise ManyGitlabsError("Expecting only one gitlab.")
     return data["gitlabs"][0].get("backupOrgs", [])
 
 
