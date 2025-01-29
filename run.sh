@@ -26,10 +26,10 @@ source venv/bin/activate
 
 pip install --upgrade pip
 
-pip install -r requirements.txt
+pip install uv
 
 # get repos
-./repos.py > repos.txt
+uv run repos.py > repos.txt
 
 # dump gpg keys to file
 echo "$GPG_KEYS" | base64 -d > $CONFIG_DIR/gpg_keys
