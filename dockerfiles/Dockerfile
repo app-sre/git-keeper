@@ -1,7 +1,31 @@
-FROM registry.access.redhat.com/ubi8/python-312
-LABEL maintainer="Serhii Kryzhnii skryzhni@redhat.com"
-COPY requirements.txt .
-RUN pip3 install --upgrade pip && pip3 install -r requirements.txt
-COPY git-keeper.py .
-RUN ln -s  /config/.netrc ~/.netrc
-ENTRYPOINT ["python3", "git-keeper.py"]
+FROM        registry.access.redhat.com/ubi9/python-312@sha256:9b84a91c94aa7e7ebfcd416db7857610bc7872ba6170cfa7b0753590d4b71dd0 AS builder
+LABEL       maintainer="Serhii Kryzhnii skryzhni@redhat.com"
+WORKDIR     /git-keeper
+COPY        --from=ghcr.io/astral-sh/uv:0.5.5@sha256:dc60491f42c9c7228fe2463f551af49a619ebcc9cbd10a470ced7ada63aa25d4 /uv /bin/uv
+COPY        --chown=1001:0 pyproject.toml uv.lock ./
+RUN         uv lock --locked
+COPY        --chown=1001:0 git-keeper.py ./git-keeper.py
+RUN         uv sync --frozen --no-cache --compile-bytecode --no-group dev --python /usr/bin/python3.12
+
+FROM        registry.access.redhat.com/ubi9/ubi-minimal:9.4-1227@sha256:f182b500ff167918ca1010595311cf162464f3aa1cab755383d38be61b4d30aa AS prod
+RUN         microdnf upgrade -y && \
+            microdnf install -y python3.12 git tar && \
+            microdnf clean all
+WORKDIR     /git-keeper
+RUN         ln -s  /config/.netrc /git-keeper/.netrc
+RUN         chown -R 1001:0 /git-keeper
+USER        1001
+ENV         VIRTUAL_ENV=/git-keeper/.venv
+ENV         PATH="$VIRTUAL_ENV/bin:$PATH"
+COPY        --from=builder /git-keeper /git-keeper
+
+ENTRYPOINT  ["python3", "git-keeper.py"]
+
+FROM        prod AS test
+COPY        --from=ghcr.io/astral-sh/uv:0.5.5@sha256:dc60491f42c9c7228fe2463f551af49a619ebcc9cbd10a470ced7ada63aa25d4 /uv /bin/uv
+USER        1001
+COPY        --chown=1001:0 repos.py ./
+ENV         UV_NO_CACHE=true
+RUN         uv sync --frozen
+RUN         uv run ruff check --no-fix -v
+RUN         uv run ruff format --check

@@ -1,14 +1,9 @@
 #!/usr/bin/python3
 
 import os
-import urllib3
 
 import requests
 from requests.auth import HTTPBasicAuth
-
-# The following line will supress
-# `InsecureRequestWarning: Unverified HTTPS request is being made`
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # GraphQL
 GRAPHQL_SERVER_BASE_URL = os.environ["GRAPHQL_SERVER_BASE_URL"]
@@ -23,10 +18,14 @@ GITLAB_SERVER = os.environ["GITLAB_SERVER"]
 GITLAB_TOKEN = os.environ["GITLAB_TOKEN"]
 
 
+class ManyGitlabsError(Exception):
+    pass
+
+
 def gql_query(query):
     auth = HTTPBasicAuth(GRAPHQL_USERNAME, GRAPHQL_PASSWORD)
-    url = "https://{}/graphql".format(GRAPHQL_SERVER_BASE_URL)
-    response = requests.get(url, params={"query": query}, auth=auth)
+    url = f"https://{GRAPHQL_SERVER_BASE_URL}/graphql"
+    response = requests.get(url, params={"query": query}, auth=auth, timeout=10)
     response.raise_for_status()
     return response.json()["data"]
 
@@ -44,26 +43,26 @@ def get_codecomponents():
         git_suffix(cc["url"])
         for app in data["apps"]
         for cc in (app["codeComponents"] or [])
-        if cc["resource"] in ("upstream", "saasrepo")
+        if cc["resource"] in {"upstream", "saasrepo"}
     ]
 
 
 def get_gitlab_backup_orgs():
     data = gql_query(GITLAB_BACKUP_ORGS_QUERY)
 
-    # TODO: this is a stop-gap measure. The proper fix is to return the url in
+    # TODO @jmelis: this is a stop-gap measure. The proper fix is to return the url in
     # the app-interface query and the token (vault secret).
+    # 003
     if len(data["gitlabs"]) != 1:
-        raise Exception("Expecting only one gitlab.")
-
+        raise ManyGitlabsError("Expecting only one gitlab.")
     return data["gitlabs"][0].get("backupOrgs", [])
 
 
 def get_gitlab_org_repos(org):
     headers = {"Private-Token": GITLAB_TOKEN}
-    base_url = os.path.join(GITLAB_SERVER, "api/v4")
+    base_url = f"{GITLAB_SERVER}/api/v4"
 
-    url = os.path.join(base_url, "groups", org, "projects")
+    url = f"{base_url}/groups/{org}/projects"
 
     items = []
 
@@ -71,7 +70,7 @@ def get_gitlab_org_repos(org):
     page = 1
     while True:
         params = {"page": page, "per_page": per_page}
-        response = requests.get(url, params=params, headers=headers, verify=False)
+        response = requests.get(url, params=params, headers=headers, timeout=10)
         response.raise_for_status()
         response_items = response.json()
 

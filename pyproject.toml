@@ -1,0 +1,84 @@
+[project]
+name = "git-keeper"
+version = "0.1.0"
+description = "This utility is for backing up git repositories. Repositories are cloned in `--mirror` mode, `tar`-ed and `gpg` encrypted, then uploaded to an S3 bucket"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "boto3>=1.36.1",
+    "botocore>=1.36.1",
+    "certifi>=2024.12.14",
+    "charset-normalizer>=3.4.1",
+    "idna>=3.10",
+    "jmespath>=1.0.1",
+    "python-dateutil>=2.9.0.post0",
+    "python-gnupg>=0.5.4",
+    "requests>=2.32.3",
+    "s3transfer>=0.11.1",
+    "sh>=2.2.1",
+    "six>=1.17.0",
+    "sretoolbox>=2.6.0",
+    "urllib3>=2.3.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.9.2",
+]
+
+# Ruff configuration
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+preview = true
+select = ["ALL"]
+
+ignore = [
+    "CPY",     # Missing copyright header
+    "D100",    # Missing docstring in public module
+    "D101",    # Missing docstring in public class
+    "D102",    # Missing docstring in public method
+    "D103",    # Missing docstring in public function
+    "D104",    # Missing docstring in public package
+    "D105",    # Missing docstring in magic method
+    "D107",    # Missing docstring in __init__
+    "D203",    # 1 blank line required before class docstring
+    "D211",    # No blank lines allowed before class docstring
+    "D212",    # multi-line-summary-first-line
+    "D213",    # multi-line-summary-second-line
+    "D4",      # Doc string style
+    "E501",    # Line too long
+    "G004",    # Logging statement uses f-string
+    "PLR0904", # Too many public methods
+    "PLR0913", # Too many arguments
+    "PLR0917", # Too many positional arguments
+    "S101",    # Use of assert detected. Pytest uses assert
+    "S404",    # subprocess import
+    "EM101",   # Exception must not use a string literal, assign to variable first
+    "EM102",   # Exception must not use an f-string literal, assign to variable first
+    "TRY003",  # Avoid specifying long messages outside the exception class
+    "TRY300",  # try-consider-else
+    # pydoclint
+    #"DOC",
+    # May conflict with the formatter, https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+    "W191",
+    "E111",
+    "E114",
+    "E117",
+    "D206",
+    "D300",
+    "Q",
+    "COM812",
+    "COM819",
+    "ISC001",
+    # Room for future improvements and refactoring
+    "ANN", # Missing annotation
+    "PT",  # Use PyTest stuff instead unittest
+    "PLR0914", # We need more locals
+    "T201", # we actually need to print
+    "FIX002", # we will fix TODO in a future, maybe
+
+]
+[tool.ruff.format]
+preview = true

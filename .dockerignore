@@ -8,3 +8,5 @@ workdir
 repolist
 config/*
 repos.txt
+/.venv/
+/venv/
