@@ -18,7 +18,6 @@ dependencies = [
     "sh>=2.2.1",
     "six>=1.17.0",
     "sretoolbox>=2.6.0",
-    "toml>=0.10.2",
     "urllib3>=2.3.0",
 ]
 

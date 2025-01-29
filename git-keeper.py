@@ -69,14 +69,14 @@ def git_clone_upload(
         repo_url += ".git"
         logger.debug("Appending .git to repo")
     repo_dir = Path(workdir) / Path(repo_url).name
-    repo_tar = repo_dir.with_suffix(repo_dir.suffix + ".tar")
+    repo_tar = Path(str(repo_dir) + ".tar")
     logger.debug("Clearing workdir")
     cleanwrkdir(workdir)
     logger.debug("Clonning repo")
     clone_repo(repo_url, repo_dir)
     logger.debug("TARing repo")
     tar(repo_tar, repo_dir)
-    repo_gpg = repo_tar.with_suffix(repo_tar.suffix + ".gpg")
+    repo_gpg = Path(str(repo_tar) + ".gpg")
     with Path.open(repo_tar, "rb") as f:
         logger.debug("Encrypting repo's tar")
         gpg.encrypt_file(
