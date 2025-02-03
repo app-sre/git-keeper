@@ -1,4 +1,4 @@
-FROM        registry.access.redhat.com/ubi9/python-312@sha256:9b84a91c94aa7e7ebfcd416db7857610bc7872ba6170cfa7b0753590d4b71dd0 AS builder
+FROM        registry.access.redhat.com/ubi9/python-312@sha256:b642db8b1f0f9dca7bbe6999db7ac4c96cf3036833fc344af092268afbb02893 AS builder
 LABEL       maintainer="Serhii Kryzhnii skryzhni@redhat.com"
 WORKDIR     /git-keeper
 COPY        --from=ghcr.io/astral-sh/uv:0.5.5@sha256:dc60491f42c9c7228fe2463f551af49a619ebcc9cbd10a470ced7ada63aa25d4 /uv /bin/uv
