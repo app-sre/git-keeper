@@ -12,7 +12,8 @@ set -e
 # - $GITLAB_SERVER
 # - $GITLAB_TOKEN
 
-IMAGE='quay.io/app-sre/git-keeper:latest'
+#IMAGE='quay.io/app-sre/git-keeper:latest'
+IMAGE='quay.io/redhat-services-prod/app-sre-tenant/git-keeper-master/git-keeper-master:latest'
 CONFIG_DIR="$PWD/config"
 mkdir -p $CONFIG_DIR/
 
