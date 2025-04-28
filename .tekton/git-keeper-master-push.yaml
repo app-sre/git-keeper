@@ -1,4 +1,3 @@
----
 apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
@@ -34,7 +33,6 @@ spec:
     value:
     - linux/amd64
   pipelineRef:
-    resolver: git
     params:
     - name: url
       value: https://github.com/app-sre/shared-pipelines
@@ -42,7 +40,9 @@ spec:
       value: main
     - name: pathInRepo
       value: pipelines/multi-arch-build-pipeline.yaml
-  taskRunTemplate: {}
+    resolver: git
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-git-keeper-master
   workspaces:
   - name: workspace
     volumeClaimTemplate:
@@ -58,3 +58,4 @@ spec:
   - name: git-auth
     secret:
       secretName: '{{ git_auth_secret }}'
+status: {}
