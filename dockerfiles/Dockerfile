@@ -7,7 +7,7 @@ RUN         uv lock --locked
 COPY        --chown=1001:0 git-keeper.py ./git-keeper.py
 RUN         uv sync --frozen --no-cache --compile-bytecode --no-group dev --python /usr/bin/python3.12
 
-FROM        registry.access.redhat.com/ubi9/ubi-minimal:9.4-1227@sha256:f182b500ff167918ca1010595311cf162464f3aa1cab755383d38be61b4d30aa AS prod
+FROM        registry.access.redhat.com/ubi9/ubi-minimal:9.6-1758184547@sha256:7c5495d5fad59aaee12abc3cbbd2b283818ee1e814b00dbc7f25bf2d14fa4f0c AS prod
 RUN         microdnf upgrade -y && \
             microdnf install -y python3.12 git tar && \
             microdnf clean all
