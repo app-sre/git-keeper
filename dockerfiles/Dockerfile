@@ -1,13 +1,13 @@
 FROM        registry.access.redhat.com/ubi9/python-312@sha256:558341c02c51ee12820185b203edaa953f18d1c2ac4426947547edd9cea44ff0 AS builder
 LABEL       maintainer="Serhii Kryzhnii skryzhni@redhat.com"
 WORKDIR     /git-keeper
-COPY        --from=ghcr.io/astral-sh/uv:0.9.1@sha256:3b368e735c0227077902233a73c5ba17a3c2097ecdd83049cbaf2aa83adc8a20 /uv /bin/uv
+COPY        --from=ghcr.io/astral-sh/uv:0.9.4@sha256:c4089b0085cf4d38e38d5cdaa5e57752c1878a6f41f2e3a3a234dc5f23942cb4 /uv /bin/uv
 COPY        --chown=1001:0 pyproject.toml uv.lock ./
 RUN         uv lock --locked
 COPY        --chown=1001:0 git-keeper.py ./git-keeper.py
 RUN         uv sync --frozen --no-cache --compile-bytecode --no-group dev --python /usr/bin/python3.12
 
-FROM        registry.access.redhat.com/ubi9/ubi-minimal:9.6-1758184547@sha256:7c5495d5fad59aaee12abc3cbbd2b283818ee1e814b00dbc7f25bf2d14fa4f0c AS prod
+FROM        registry.access.redhat.com/ubi9/ubi-minimal:9.6-1760515502@sha256:34880b64c07f28f64d95737f82f891516de9a3b43583f39970f7bf8e4cfa48b7 AS prod
 RUN         microdnf upgrade -y && \
             microdnf install -y python3.12 git tar && \
             microdnf clean all
@@ -22,7 +22,7 @@ COPY        --from=builder /git-keeper /git-keeper
 ENTRYPOINT  ["python3", "git-keeper.py"]
 
 FROM        prod AS test
-COPY        --from=ghcr.io/astral-sh/uv:0.9.1@sha256:3b368e735c0227077902233a73c5ba17a3c2097ecdd83049cbaf2aa83adc8a20 /uv /bin/uv
+COPY        --from=ghcr.io/astral-sh/uv:0.9.4@sha256:c4089b0085cf4d38e38d5cdaa5e57752c1878a6f41f2e3a3a234dc5f23942cb4 /uv /bin/uv
 USER        1001
 COPY        --chown=1001:0 repos.py ./
 ENV         UV_NO_CACHE=true
