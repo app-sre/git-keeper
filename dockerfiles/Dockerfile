@@ -1,16 +1,16 @@
-FROM        registry.access.redhat.com/ubi9/python-312@sha256:37c869e16388c960d533f317c48e2cad8e80561b0c6b59e697e38e7e9d103b9b AS builder
+FROM        registry.access.redhat.com/ubi10/python-314-minimal@sha256:90d72f9275f8f4e7869c42b9a1e25d5cf458c970e15dd3ed072f38a7f07dabd6 AS builder
 LABEL       maintainer="Serhii Kryzhnii skryzhni@redhat.com"
 WORKDIR     /git-keeper
 COPY        --from=ghcr.io/astral-sh/uv:0.11.24@sha256:99ea34acedc870ba4ad11a1f540a1c04267c9f30aadc465a94406f52dfda2c36 /uv /bin/uv
 COPY        --chown=1001:0 pyproject.toml uv.lock ./
 RUN         uv lock --locked
 COPY        --chown=1001:0 git-keeper.py ./git-keeper.py
-RUN         uv sync --frozen --no-cache --compile-bytecode --no-group dev --python /usr/bin/python3.12
+RUN         uv sync --frozen --no-cache --compile-bytecode --no-group dev --python /usr/bin/python3.14
 
-FROM        registry.access.redhat.com/ubi9/ubi-minimal:9.8-1782191395@sha256:850143255ee0d1915f09aaa09f6ed31f24086ba605c323badfbefa95b8c52b0e AS prod
+FROM        registry.access.redhat.com/ubi10/python-314-minimal@sha256:90d72f9275f8f4e7869c42b9a1e25d5cf458c970e15dd3ed072f38a7f07dabd6 AS prod
 RUN         microdnf upgrade -y && \
-            microdnf install -y python3.12 git tar && \
-            microdnf clean all
+    microdnf install -y git tar && \
+    microdnf clean all
 WORKDIR     /git-keeper
 RUN         ln -s  /config/.netrc /git-keeper/.netrc
 RUN         chown -R 1001:0 /git-keeper
