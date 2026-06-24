@@ -15,6 +15,8 @@ WORKDIR     /git-keeper
 RUN         ln -s  /config/.netrc /git-keeper/.netrc
 RUN         chown -R 1001:0 /git-keeper
 USER        1001
+ENV         HOME=/git-keeper
+ENV         GIT_TERMINAL_PROMPT=0
 ENV         VIRTUAL_ENV=/git-keeper/.venv
 ENV         PATH="$VIRTUAL_ENV/bin:$PATH"
 COPY        --from=builder /git-keeper /git-keeper
