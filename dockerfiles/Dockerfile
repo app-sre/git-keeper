@@ -9,7 +9,7 @@ RUN         uv sync --frozen --no-cache --compile-bytecode --no-group dev --pyth
 FROM        registry.access.redhat.com/ubi10/python-314-minimal@sha256:90d72f9275f8f4e7869c42b9a1e25d5cf458c970e15dd3ed072f38a7f07dabd6 AS prod
 USER        0
 RUN         microdnf upgrade -y && \
-    microdnf install -y git tar && \
+    microdnf install -y gpg git tar && \
     microdnf clean all
 WORKDIR     /git-keeper
 RUN         ln -s  /config/.netrc /git-keeper/.netrc
@@ -29,3 +29,4 @@ ENV         UV_NO_CACHE=true
 RUN         uv sync --frozen
 RUN         uv run ruff check --no-fix -v
 RUN         uv run ruff format --check
+RUN         git --version && tar --version && gpg --version
