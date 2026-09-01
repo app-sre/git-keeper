@@ -1,6 +1,6 @@
 FROM        registry.access.redhat.com/ubi10/python-314-minimal@sha256:b7243a5f6ac9616eff0475c1a3caa4e71118d6d00151a82e019fd6f2260acc19 AS builder
 WORKDIR     /git-keeper
-COPY        --from=ghcr.io/astral-sh/uv:0.12.7@sha256:95f2aa1fe59274951cfe9b0cbc7972e879ff1004bc8945d130a32eb0dbd85945 /uv /bin/uv
+COPY        --from=ghcr.io/astral-sh/uv:0.12.8@sha256:d1cbaeadc234fe19c0d93daabcf5e98738cd93c6d1dd4918ef6aa30735feb23a /uv /bin/uv
 COPY        --chown=1001:0 pyproject.toml uv.lock ./
 RUN         uv lock --locked
 COPY        --chown=1001:0 git-keeper.py ./git-keeper.py
@@ -23,7 +23,7 @@ COPY        --from=builder /git-keeper /git-keeper
 ENTRYPOINT  ["python3", "git-keeper.py"]
 
 FROM        prod AS test
-COPY        --from=ghcr.io/astral-sh/uv:0.12.7@sha256:95f2aa1fe59274951cfe9b0cbc7972e879ff1004bc8945d130a32eb0dbd85945 /uv /bin/uv
+COPY        --from=ghcr.io/astral-sh/uv:0.12.8@sha256:d1cbaeadc234fe19c0d93daabcf5e98738cd93c6d1dd4918ef6aa30735feb23a /uv /bin/uv
 USER        1001
 COPY        --chown=1001:0 repos.py ./
 ENV         UV_NO_CACHE=true
