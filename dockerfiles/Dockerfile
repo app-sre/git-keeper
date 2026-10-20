@@ -1,4 +1,4 @@
-FROM        registry.access.redhat.com/ubi10/python-314-minimal@sha256:3754d6dacac3177e62637420cadf7dcf438e390f664c527b0457a79653a47488 AS builder
+FROM        registry.access.redhat.com/ubi10/python-314-minimal@sha256:46674e98e8d0c591e2c08fa749d704b18007bd24c2e1823e6d1b082f403a83c7 AS builder
 WORKDIR     /git-keeper
 COPY        --from=ghcr.io/astral-sh/uv:0.13.2@sha256:b9fddcde095a7aeafd499024adb8927df6619c7c5672f5ff7126474715f62ba4 /uv /bin/uv
 COPY        --chown=1001:0 pyproject.toml uv.lock ./
@@ -6,7 +6,7 @@ RUN         uv lock --locked
 COPY        --chown=1001:0 git-keeper.py ./git-keeper.py
 RUN         uv sync --frozen --no-cache --compile-bytecode --no-group dev --python /usr/bin/python3.14
 
-FROM        registry.access.redhat.com/ubi10/python-314-minimal@sha256:3754d6dacac3177e62637420cadf7dcf438e390f664c527b0457a79653a47488 AS prod
+FROM        registry.access.redhat.com/ubi10/python-314-minimal@sha256:46674e98e8d0c591e2c08fa749d704b18007bd24c2e1823e6d1b082f403a83c7 AS prod
 USER        0
 RUN         microdnf upgrade -y && \
     microdnf install -y gpg git tar && \
